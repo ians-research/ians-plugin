@@ -1,0 +1,17 @@
+{
+  "name": "ians-claude-skills",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Build tooling for the IANS Claude skills marketplace. Not a published package.",
+  "type": "module",
+  "scripts": {
+    "build:skills": "node scripts/build-skill-zip.mjs",
+    "build:skill": "node scripts/build-skill-zip.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "archiver": "8.0.0"
+  }
+}

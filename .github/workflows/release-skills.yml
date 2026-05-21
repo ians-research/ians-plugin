@@ -1,0 +1,66 @@
+name: Release skill zips
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - 'scripts/build-skill-zip.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/release-skills.yml'
+
+jobs:
+  build:
+    name: Build skill zips
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Validate skills (check-only on PRs)
+        if: github.event_name == 'pull_request'
+        run: node scripts/build-skill-zip.mjs --check
+
+      - name: Build skill zips
+        if: github.event_name != 'pull_request'
+        run: node scripts/build-skill-zip.mjs
+
+      - name: Upload zip artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-zips
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true

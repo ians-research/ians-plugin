@@ -1,0 +1,172 @@
+{
+  "skill_name": "request-ask-an-expert",
+  "evals": [
+    {
+      "id": 13,
+      "name": "natural-language-deadline-parsing",
+      "prompt": "I want to set up an AAE call about our PCI DSS 4.0 transition strategy. I need to have direction by next Friday — we have a steering committee meeting and I'd like to present a recommendation backed by faculty input. Please submit via IANS when ready.",
+      "expected_output": "Submit mode (default). Skill calls ians_whoami(), passes entitlement gate, recommends Phone resolution. parse_urgency.py interprets 'next Friday' as the upcoming Friday relative to the session date. Sets expedite_request: true with deadline ISO. Surfaces the warning that a short window is tighter than the standard 8-12 business day Phone turnaround. Skill should acknowledge the ambiguity of 'next Friday' (two common interpretations) and confirm the user's intent before locking the draft.",
+      "files": [],
+      "notes": "Edge case: 'next Friday' has two common interpretations. The parser picks the upcoming one; the skill surfaces ambiguity via warning + confirm step.",
+      "structural_checklist": [
+        "Phone resolution recommended",
+        "expedite_request set to true",
+        "Deadline parsed to ISO date",
+        "Deadline >= today (passes minDate validation)",
+        "Standard turnaround timing flagged given tight deadline",
+        "Skill confirms 'next Friday' interpretation with user"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "ambiguous-guidance-asks-user",
+      "prompt": "I'm curious about emerging trends in cybersecurity insurance — what should I be paying attention to over the next 12 months? Set up an AAE for me.",
+      "expected_output": "Skill recommends Phone resolution (open-ended trend question). Drafts Driver and Question. infer_guidance returns empty array (purely informational, no strategic/exec or technical/tactical signal). Skill ASKS the user to pick Strategic or Technical (or both) — does not silently default to Strategic. Lists the two options with platform form's helper text.",
+      "files": [],
+      "notes": "This tests the ambiguity branch — the inference script returns empty array and the skill must surface that as an explicit user prompt rather than fabricating guidance.",
+      "structural_checklist": [
+        "Phone resolution recommended",
+        "Skill asks user to pick guidance type",
+        "Both Strategic and Technical options shown",
+        "No silent default applied",
+        "Required-field enforcement present"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "over-length-input-trimming",
+      "prompt": "[Context: 4000-character monologue about a multi-year SOC modernization journey, with details about team size, tooling history, regulatory environment, prior decisions, vendor relationships, board dynamics, and 6 distinct questions for faculty.] Set up an AAE call.",
+      "expected_output": "Skill drafts payload. Driver is trimmed to <=1000 chars (specifics over background). Details is trimmed to <=500 chars. Question is trimmed to 3-5 items (not all 6). Skill surfaces what was trimmed in the review step — 'I trimmed your Q3 vendor history from Details to fit the 500-char cap; let me know if any of it should go back in.' User can request specific items be added back.",
+      "files": [],
+      "notes": "draft_payload.py trims with a sentence/word boundary; that's intentional. The skill's job at review time is to be transparent about the trimming.",
+      "structural_checklist": [
+        "Driver respects 1000-char cap",
+        "Details respects 500-char cap",
+        "Question is 3-5 items (not 6+)",
+        "trimmed_fields surfaced in review step",
+        "User offered the option to restore specific content"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "urgency-no-rush-overrides-cues",
+      "prompt": "[Programmatic test for parse_urgency.py.] User says 'no rush — whenever you can fit me in over the next few weeks works fine.' Verify expedite_request stays false even though 'next few weeks' has a duration cue.",
+      "expected_output": "parse_urgency returns expedite_request:false, deadline:null, matched_phrase contains 'no rush', reasoning notes the explicit deflation. The 'no rush' signal must override duration cues so users can downplay urgency in their own words.",
+      "files": [],
+      "notes": "Sprint 2 unit-flavor test — checks that no_rush language wins over relative duration phrases.",
+      "structural_checklist": [
+        "expedite_request is false",
+        "deadline is null",
+        "matched_phrase contains 'no rush' or equivalent",
+        "Reasoning explains the override"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "scheduling-mixed-routes-correctly",
+      "prompt": "[Programmatic test for parse_scheduling.py.] User says 'I'm in EST, mornings work better, here's my Calendly: https://calendly.com/javier-rivera'. Verify the URL routes to calendarlink and the time-zone/availability text routes to availability.",
+      "expected_output": "parse_scheduling returns calendarlink containing the Calendly URL, availability containing 'EST' and 'mornings'. extracted_urls includes the Calendly URL. Both fields respect their character caps. trimmed_fields is empty for short input.",
+      "files": [],
+      "notes": "Sprint 2 unit-flavor test for the routing logic.",
+      "structural_checklist": [
+        "calendarlink contains the Calendly URL",
+        "availability contains time-zone and preference text",
+        "extracted_urls is non-empty",
+        "Neither field exceeds its cap"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "submit-mode-option-b-submission-artifact",
+      "prompt": "I want to submit an Ask-an-Expert about our PCI DSS 4.0 audit prep. We're a payments processor. Send it now via the IANS MCP, please.",
+      "expected_output": "Skill calls ians_whoami(). Submit mode is the default — no mode prompt shown. Skill builds the form-shaped review with verbatim platform-form labels and order: Resolution Type (with the three options' value descriptions), Driver and Context, Specific Questions, Other Details, Guidance Type, Expedite + Deadline, Email (read-only), Scheduling, Submitter (read-only). Recommends Phone with one-line reasoning. After user confirms, calls submit_via_connector.py — receives status:tool_not_registered. Falls back to build_submission_artifact.py and produces the .json file. Closing message tells the user to hand the artifact to their IANS account manager.",
+      "files": [],
+      "notes": "v0.3+: Submit-by-default. Form-shaped review with verbatim platform-form labels.",
+      "structural_checklist": [
+        "ians_whoami called",
+        "Entitlement gate passed",
+        "Submit mode is default — no scope-vs-submit prompt shown",
+        "Form-shaped review uses verbatim platform-form labels (e.g., 'What is the driver and context behind this request?')",
+        "Resolution Type section includes three options with value descriptions matching the form",
+        "Draft reviewed and locked",
+        "submit_via_connector.py invoked with payload",
+        "Response status is tool_not_registered",
+        "build_submission_artifact.py invoked as fallback",
+        ".json file produced with form-submission shape",
+        "Closing message tells user to hand the file to their IANS account manager"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "submit-mode-option-a-mocked",
+      "prompt": "[Programmatic test for the future Option A path.] Given a fully-populated AAE payload and a mocked successful connector response (case_id 00012345, tracking_url, expected_response_window), verify that submit_via_connector.py returns status:submitted with the case ID surfaced.",
+      "expected_output": "submit_via_connector.py invoked with --mock-response pointing at a success-shaped JSON. Script returns status:submitted, case_id:'00012345', tracking_url, expected_response_window matching the resolution. idempotency_key is generated. Skill surfaces case ID and tracking URL to the user with the appropriate timeline language.",
+      "files": [
+        "fixtures/sample-payload-full.json",
+        "fixtures/mock-connector-success.json"
+      ],
+      "notes": "Tests the connector path the skill takes once ians_request_aae ships. Uses IANS_REQUEST_AAE_AVAILABLE=1 + --mock-response.",
+      "structural_checklist": [
+        "submit_via_connector exits 0",
+        "Response status is 'submitted'",
+        "case_id present and matches mock",
+        "tracking_url present",
+        "expected_response_window populated",
+        "idempotency_key generated"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "edge-connector-down-refuses-both-modes",
+      "prompt": "Request an AAE about our zero-trust rollout.",
+      "expected_output": "Skill calls ians_whoami(). Connector is unavailable (network error, auth error, or tool-not-found). Skill stops at Step 0 and shows the connector-required message verbatim. Does NOT proceed to drafting — submit flow requires a connected MCP server because the skill can't verify identity, entitlements, or origin without it.",
+      "files": [],
+      "notes": "Run with the IANS MCP connector disconnected. Tests Step 0's hard gate.",
+      "structural_checklist": [
+        "Skill stops at Step 0",
+        "Connector-required message shown verbatim",
+        "No drafting performed",
+        "No file produced",
+        "No submission artifact constructed"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "submission-artifact-shape-matches-form",
+      "prompt": "[Programmatic test for build_submission_artifact.py.] Given a fully-populated Phone payload and a whoami fixture, verify the script writes a .json file whose top-level keys match the platform AAE form's submission payload exactly.",
+      "expected_output": "build_submission_artifact.py exits 0 and writes a .json file at --output. Top-level keys (in this exact set, no others): resolution, driver, question, details, guidance, expedite_request, deadline, preferred_method, email_address, phone_number, alt_phone_number, availability, calendarlink, expectedCallLength, isUndecided, origin, ask_ians_id. For Phone resolution: details/guidance/availability/calendarlink populated; preferred_method='Phone'; expectedCallLength='60 Minutes'; isUndecided=false. For Faculty Poll resolution: details/guidance/availability/calendarlink are empty strings (not null); preferred_method='Email'; expectedCallLength=null; isUndecided=false. email_address comes from whoami. phone_number and alt_phone_number are null. origin is 'IANS MCP Claude'. guidance is semicolon-delimited (e.g., 'Strategic;Technical').",
+      "files": [
+        "fixtures/sample-payload-full.json"
+      ],
+      "notes": "Replaces the earlier URL-encoding test. Validates that the artifact drops 1:1 into the platform form's submission shape, so IANS-side ingestion needs no translation.",
+      "structural_checklist": [
+        "Top-level keys match the platform AAE form's submission payload exactly",
+        "guidance is semicolon-delimited string (not array)",
+        "Phone variant: expectedCallLength='60 Minutes', preferred_method='Phone', details/guidance/availability/calendarlink populated",
+        "Faculty Poll variant: expectedCallLength=null, preferred_method='Email', skipped fields are empty strings (not null)",
+        "email_address pulled from whoami",
+        "phone_number and alt_phone_number are null",
+        "origin is 'IANS MCP Claude'",
+        "isUndecided is true only for resolution=Undecided"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "submit-error-mapping",
+      "prompt": "[Programmatic test for submit_via_connector.py error path.] Mock the connector returning error_code=validation_failed with details {driver: 'exceeds limit'}. Verify the script returns retryable:true with a user-friendly message and preserves the per-field details.",
+      "expected_output": "submit_via_connector.py with --mock-response pointing at a validation-error-shaped mock returns status:error, error_code:validation_failed, retryable:true, details preserved, user_message that's actionable. Skill response would route the user back to Step 4 (review/edit) rather than retrying blindly.",
+      "files": [
+        "fixtures/sample-payload-full.json",
+        "fixtures/mock-connector-validation-error.json"
+      ],
+      "notes": "Sprint 3 unit-flavor test. Catches regressions in error mapping or message phrasing.",
+      "structural_checklist": [
+        "Status is 'error'",
+        "error_code matches input",
+        "retryable is true for validation_failed",
+        "details preserved with per-field info",
+        "user_message is non-empty and actionable"
+      ]
+    }
+  ]
+}

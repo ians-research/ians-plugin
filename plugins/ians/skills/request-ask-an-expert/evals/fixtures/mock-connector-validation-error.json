@@ -1,0 +1,7 @@
+{
+  "error_code": "validation_failed",
+  "details": {
+    "driver": "exceeds 1000 character limit",
+    "deadline": "must be in the future"
+  }
+}
