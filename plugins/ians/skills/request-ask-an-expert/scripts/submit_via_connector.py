@@ -192,7 +192,7 @@ def shape_unexpected_connector_error(
         "error_code": error_code,
         "user_message": UNEXPECTED_CONNECTOR_ERROR_MESSAGE,
         "retryable": False,
-        "details": {"original_error_code": error_code, **(details or {})},
+        "details": {**(details or {}), "original_error_code": error_code},
         "idempotency_key": idempotency_key,
     }
 

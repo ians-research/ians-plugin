@@ -99,6 +99,15 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertEqual(out["details"]["field"], "x")
         self.assertNotIn("options", out)
 
+    def test_unknown_error_code_overrides_caller_original_error_code(self):
+        out = shape_error(
+            "contract_version_mismatch",
+            "idem-8",
+            {"original_error_code": "spoofed", "field": "x"},
+        )
+        self.assertEqual(out["details"]["original_error_code"], "contract_version_mismatch")
+        self.assertEqual(out["details"]["field"], "x")
+
 
 class SubmitViaConnectorCliTest(unittest.TestCase):
     def _run_script(self, *extra_args: str) -> dict:
