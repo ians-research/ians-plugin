@@ -6,7 +6,7 @@ A bundle of [Claude Code](https://code.claude.com) and [Claude Cowork](https://c
 
 | Skill | Description |
 | --- | --- |
-| [`request-ask-an-expert`](./skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS Research. Conversational form-filler that mirrors the platform AAE form, validates required fields, and either submits through the IANS MCP or produces a JSON submission artifact for your account manager. |
+| [`request-ask-an-expert`](./skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS Research. Conversational form-filler that mirrors the platform AAE form, validates required fields, and submits through the IANS MCP connector (with graceful failure handling when the connector is unavailable). |
 
 More IANS skills will be added under [`skills/`](./skills/) over time. Skills inside this plugin can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md` references — they share one plugin root.
 
