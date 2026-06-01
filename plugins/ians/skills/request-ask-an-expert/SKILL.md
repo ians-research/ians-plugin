@@ -309,7 +309,7 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
      --payload <path-to-payload.json>
    ```
 
-   When `ians_request_aae` is registered in the MCP session, call the tool with the payload from `build_connector_payload` (same canonical shape the script produces).
+   When `ians_request_aae` is registered in the MCP session, call the tool directly with the canonical connector payload — the **Input** shape documented in the Connector contract below, which is the same shape `submit_via_connector.py` builds before invoking the tool.
 
 2. **Status `submitted`** — connector accepted the request. Surface verbatim:
 

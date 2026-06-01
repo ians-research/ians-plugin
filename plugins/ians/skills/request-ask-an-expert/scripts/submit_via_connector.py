@@ -82,7 +82,12 @@ GRACEFUL_FAILURE_OPTIONS = [
 
 CONNECTOR_UNAVAILABLE_MESSAGE = (
     "I couldn't submit your Ask-an-Expert request through the IANS connector "
-    "right now. Your draft is still here — pick what you'd like to do next."
+    "right now. Your draft is still here — what would you like to do?"
+)
+
+UNEXPECTED_CONNECTOR_ERROR_MESSAGE = (
+    "The connector returned an unexpected error. Contact Client Services if "
+    "this persists."
 )
 
 ERROR_USER_MESSAGES = {
@@ -178,6 +183,20 @@ def shape_connector_unavailable(
     }
 
 
+def shape_unexpected_connector_error(
+    error_code: str, idempotency_key: str, details: dict | None = None,
+) -> dict:
+    """Shape an unknown connector error — not an availability failure."""
+    return {
+        "status": "error",
+        "error_code": error_code,
+        "user_message": UNEXPECTED_CONNECTOR_ERROR_MESSAGE,
+        "retryable": False,
+        "details": {"original_error_code": error_code, **(details or {})},
+        "idempotency_key": idempotency_key,
+    }
+
+
 def shape_error(
     error_code: str, idempotency_key: str, details: dict | None = None,
 ) -> dict:
@@ -191,11 +210,7 @@ def shape_error(
         return shape_connector_unavailable(reason, idempotency_key)
 
     if error_code not in ERROR_USER_MESSAGES:
-        details = {"original_error_code": error_code, **(details or {})}
-        return shape_connector_unavailable(
-            f"Unexpected connector error: {error_code}",
-            idempotency_key,
-        )
+        return shape_unexpected_connector_error(error_code, idempotency_key, details)
 
     return {
         "status": "error",

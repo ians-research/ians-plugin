@@ -90,6 +90,15 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertEqual(out["status"], "error")
         self.assertEqual(out["error_code"], "validation_failed")
 
+    def test_unknown_error_code_stays_error_not_unavailable(self):
+        out = shape_error("contract_version_mismatch", "idem-7", {"field": "x"})
+        self.assertEqual(out["status"], "error")
+        self.assertEqual(out["error_code"], "contract_version_mismatch")
+        self.assertFalse(out["retryable"])
+        self.assertEqual(out["details"]["original_error_code"], "contract_version_mismatch")
+        self.assertEqual(out["details"]["field"], "x")
+        self.assertNotIn("options", out)
+
 
 class SubmitViaConnectorCliTest(unittest.TestCase):
     def _run_script(self, *extra_args: str) -> dict:

@@ -139,6 +139,10 @@ def main() -> None:
         print(json.dumps({"error": f"Could not parse input: {e}"}), file=sys.stderr)
         sys.exit(2)
 
+    if not isinstance(payload, dict):
+        print(json.dumps({"error": "Input JSON must be an object"}), file=sys.stderr)
+        sys.exit(2)
+
     result = check_poll_fit(
         payload.get("questions") or payload.get("question"),
         payload.get("driver"),
