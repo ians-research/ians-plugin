@@ -18,9 +18,13 @@ Field shape mirrors the platform AAE form's submission payload:
 
   resolution           - Phone | Faculty Poll | Undecided
   driver               - string (trimmed)
-  question             - string (trimmed; numbered list serialized as text)
+  question             - string; canonical "1. Q\\n2. Q" form. Accepts a
+                         list[str] or a pre-serialized string on input and
+                         strips leading category sub-labels (DAAS-167).
   details              - string (trimmed; '' for Faculty Poll)
-  guidance             - semicolon-delimited string ('' for Faculty Poll)
+  guidance             - semicolon-delimited canonical picklist labels
+                         ("Strategic / Executive;Technical / Tactical"); short
+                         forms ("Strategic") are normalized. '' for Faculty Poll.
   expedite_request     - boolean
   deadline             - YYYY-MM-DD or null
   preferred_method     - 'Phone' | 'Email' (Phone for Phone/Undecided,
@@ -67,6 +71,8 @@ import json
 import sys
 from pathlib import Path
 
+from aae_common import canonicalize_questions, normalize_guidance
+
 
 def transform_to_form_submission(
     payload: dict,
@@ -97,13 +103,20 @@ def transform_to_form_submission(
         or None
     )
 
-    guidance_list = payload.get("guidance") or []
-    guidance_str = ";".join(guidance_list) if guidance_list else ""
+    # Guidance is stored in Salesforce as a strict picklist; emit the canonical
+    # long-form labels ("Strategic / Executive") and accept short-form aliases
+    # ("Strategic") on input (DAAS-168).
+    canonical_guidance, _normalized, _unknown = normalize_guidance(payload.get("guidance"))
+    guidance_str = ";".join(canonical_guidance)
+
+    # Question can arrive as list[str] or a pre-serialized (possibly sub-labelled)
+    # string; emit the single canonical "1. Q\n2. Q" form (DAAS-167).
+    question_str = canonicalize_questions(payload.get("question"))
 
     return {
         "resolution": resolution,
         "driver": (payload.get("driver") or "").strip(),
-        "question": (payload.get("question") or "").strip(),
+        "question": question_str,
         "details": "" if is_fp else (payload.get("details") or "").strip(),
         "guidance": "" if is_fp else guidance_str,
         "expedite_request": bool(payload.get("expedite_request")),
