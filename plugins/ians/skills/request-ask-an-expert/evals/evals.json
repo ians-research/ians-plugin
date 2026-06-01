@@ -134,14 +134,15 @@
       "id": 19,
       "name": "submission-artifact-shape-matches-form",
       "prompt": "[Programmatic test for build_submission_artifact.py.] Given a fully-populated Phone payload and a whoami fixture, verify the script writes a .json file whose top-level keys match the platform AAE form's submission payload exactly.",
-      "expected_output": "build_submission_artifact.py exits 0 and writes a .json file at --output. Top-level keys (in this exact set, no others): resolution, driver, question, details, guidance, expedite_request, deadline, preferred_method, email_address, phone_number, alt_phone_number, availability, calendarlink, expectedCallLength, isUndecided, origin, ask_ians_id. For Phone resolution: details/guidance/availability/calendarlink populated; preferred_method='Phone'; expectedCallLength='60 Minutes'; isUndecided=false. For Faculty Poll resolution: details/guidance/availability/calendarlink are empty strings (not null); preferred_method='Email'; expectedCallLength=null; isUndecided=false. email_address comes from whoami. phone_number and alt_phone_number are null. origin is 'IANS MCP Claude'. guidance is semicolon-delimited (e.g., 'Strategic;Technical').",
+      "expected_output": "build_submission_artifact.py exits 0 and writes a .json file at --output. Top-level keys (in this exact set, no others): resolution, driver, question, details, guidance, expedite_request, deadline, preferred_method, email_address, phone_number, alt_phone_number, availability, calendarlink, expectedCallLength, isUndecided, origin, ask_ians_id. For Phone resolution: details/guidance/availability/calendarlink populated; preferred_method='Phone'; expectedCallLength='60 Minutes'; isUndecided=false. For Faculty Poll resolution: details/guidance/availability/calendarlink are empty strings (not null); preferred_method='Email'; expectedCallLength=null; isUndecided=false. email_address comes from whoami. phone_number and alt_phone_number are null. origin is 'IANS MCP Claude'. guidance is the semicolon-delimited canonical Salesforce picklist labels — short-form input ['Strategic','Technical'] normalizes to 'Strategic / Executive;Technical / Tactical' (DAAS-168). question is the canonical '1. Q\\n2. Q' form regardless of whether the payload supplied a list or a string (DAAS-167).",
       "files": [
         "fixtures/sample-payload-full.json"
       ],
       "notes": "Replaces the earlier URL-encoding test. Validates that the artifact drops 1:1 into the platform form's submission shape, so IANS-side ingestion needs no translation.",
       "structural_checklist": [
         "Top-level keys match the platform AAE form's submission payload exactly",
-        "guidance is semicolon-delimited string (not array)",
+        "guidance is the canonical semicolon-delimited picklist labels (Strategic / Executive;Technical / Tactical), normalized from short form",
+        "question serialized to canonical '1. Q\\n2. Q' form",
         "Phone variant: expectedCallLength='60 Minutes', preferred_method='Phone', details/guidance/availability/calendarlink populated",
         "Faculty Poll variant: expectedCallLength=null, preferred_method='Email', skipped fields are empty strings (not null)",
         "email_address pulled from whoami",
@@ -166,6 +167,178 @@
         "retryable is true for validation_failed",
         "details preserved with per-field info",
         "user_message is non-empty and actionable"
+      ]
+    },
+    {
+      "id": 167,
+      "name": "question-serializer-canonical-shape",
+      "prompt": "[Programmatic test for build_submission_artifact.py + validate_submission.py.] Given a payload whose question field is a list ['Cyberattacks — How exposed are we?', 'Energy & Supply Chain: How do we prioritize?', 'Reporting — How do we frame the risk?'], verify the artifact emits the canonical '1. Q\\n2. Q\\n3. Q' string with category sub-labels stripped, and that validate_submission.py counts three questions.",
+      "expected_output": "canonicalize_questions accepts the list and emits '1. How exposed are we?\\n2. How do we prioritize?\\n3. How do we frame the risk?' — leading em-dash and colon category labels removed, items renumbered. validate_submission.py accepts both the list shape and the pre-serialized string via the same canonical path; the question count is 3 (passes the Phone 3-5 range). fixtures/sample-payload-v040-canonical.json exercises the list shape end-to-end.",
+      "files": [
+        "fixtures/sample-payload-v040-canonical.json"
+      ],
+      "notes": "DAAS-167. Covered programmatically by evals/tests/test_aae_common.py, test_build_submission_artifact.py, and test_validate_submission.py.",
+      "structural_checklist": [
+        "build_submission_artifact.py accepts list[str] or a pre-serialized string and emits canonical '1. Q\\n2. Q\\n3. Q'",
+        "Em-dash and colon sub-labels are stripped from the start of each question",
+        "validate_submission.py accepts both shapes via the canonical payload schema",
+        "fixtures/sample-payload-v040-canonical.json exercises the list shape"
+      ]
+    },
+    {
+      "id": 168,
+      "name": "guidance-canonical-picklist-values",
+      "prompt": "[Programmatic test for infer_guidance.py + build_submission_artifact.py + validate_submission.py.] Verify guidance is emitted as the canonical Salesforce picklist labels 'Strategic / Executive' and 'Technical / Tactical', and that short-form aliases are accepted but normalized.",
+      "expected_output": "infer_guidance.py returns ['Strategic / Executive'] / ['Technical / Tactical'] / both (never the short form). validate_submission.py accepts short-form aliases ('Strategic') as valid but emits a guidance 'normalized' warning instructing the skill to rewrite to canonical. build_submission_artifact.py writes the canonical semicolon-delimited form. Confirmed the SFDC picklist values match exactly (spaces around the slash).",
+      "files": [],
+      "notes": "DAAS-168. SFDC picklists are strict; mismatched values silently drop the field. Covered by evals/tests/test_infer_guidance.py and test_validate_submission.py.",
+      "structural_checklist": [
+        "infer_guidance.py returns the canonical strings",
+        "validate_submission.py accepts short-form aliases on input but normalizes and warns",
+        "build_submission_artifact.py writes the canonical form",
+        "SFDC picklist values match exactly: 'Strategic / Executive', 'Technical / Tactical'"
+      ]
+    },
+    {
+      "id": 169,
+      "name": "placeholder-unfilled-blocks-submission",
+      "prompt": "[Programmatic test for validate_submission.py.] Submit a payload where the Questions field still contains the literal placeholder '[needs your input — what 3-5 specific questions...]' (or is empty). Verify validation blocks before any artifact is written.",
+      "expected_output": "validate_submission.py returns valid:false with a 'placeholder_unfilled' error on the question field. The same code fires for a placeholder driver, a placeholder guidance value, and a placeholder deadline when expedited. Empty required fields are still rejected (missing). List-form question fields are checked item by item, not just the container. Exit code is 1.",
+      "files": [],
+      "notes": "DAAS-169. Covered by evals/tests/test_validate_submission.py PlaceholderUnfilledTest.",
+      "structural_checklist": [
+        "validate_submission.py adds a placeholder_unfilled error code",
+        "Validation rejects any required field containing the literal placeholder string",
+        "Validation rejects empty required fields",
+        "List-form fields check each item, not just the container"
+      ]
+    },
+    {
+      "id": 170,
+      "name": "no-partial-reviews-all-sections-render",
+      "prompt": "I want to submit an Ask-an-Expert about our cloud IAM consolidation. Set it up as a Phone call.",
+      "expected_output": "Skill recommends Phone. The FIRST review message renders every required section for Phone/Undecided in a single message — Resolution Type, Driver, Specific Questions, Other Details, Guidance, Expedite + Deadline (with turnaround windows), Email (read-only), Scheduling, Submitter. Other Details and Scheduling appear on the first pass with [optional] placeholders even though nothing was extracted; the user is not forced to prompt for them. A Faculty Poll run instead skips Other Details, Guidance, and Scheduling entirely.",
+      "files": [],
+      "notes": "DAAS-170. Reported by Kate Lombard — Scheduling never surfaced and Other Details only appeared after a follow-up prompt.",
+      "structural_checklist": [
+        "Step 4 enforces no-partial-reviews — required section list is locked per resolution",
+        "Scheduling renders for Phone/Undecided with [optional] placeholders when parse_scheduling returns null",
+        "First review message includes every required section (eval fails if any is missing)",
+        "Faculty Poll path skips Other Details, Guidance, and Scheduling entirely"
+      ]
+    },
+    {
+      "id": 171,
+      "name": "active-incident-no-improvised-ir-or-service-names",
+      "prompt": "We're in the middle of an active breach right now — attackers are still in our environment. I want to set up an Ask-an-Expert.",
+      "expected_output": "Step 0.5 detects active-incident language ('in the middle of', 'active breach', 'still in'). The skill proceeds straight to the AAE flow — drafts the submission, presents the form-shaped review, submits. It does NOT improvise incident-response advice or 'while we wait, here's what you can do' parallel-work suggestions, and it does NOT name or recommend any other IANS service (ICC, Incident Command Center, retainers). Behavior is identical on Opus and Sonnet.",
+      "files": [],
+      "notes": "DAAS-171. Observed in claude.ai Chat 1 (Iran war scenario). ICC referrals are a coordinator/account-manager call.",
+      "structural_checklist": [
+        "Active-incident language detected (Step 0.5)",
+        "No parallel-work suggestions offered",
+        "No IANS service named beyond AAE",
+        "Out-of-scope list documents the rule",
+        "Holds for both Opus and Sonnet"
+      ]
+    },
+    {
+      "id": 173,
+      "name": "ians-search-grounding-before-drafting",
+      "prompt": "Set up an AAE about how peers are handling SEC cyber disclosure rules.",
+      "expected_output": "Before drafting Driver/Questions from open-web knowledge, the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability.",
+      "files": [],
+      "notes": "DAAS-173. In Cowork Chat 4 the skill cited open-web sources despite IANS coverage.",
+      "structural_checklist": [
+        "Step 2.5 documented in SKILL.md with exact user-facing wording",
+        "Skill calls ians_search before any open-web drafting",
+        "When results exist, up to 3 candidates surfaced and user asked before continuing",
+        "When no results, skill states so and continues from conversation context only",
+        "Documented behavior when ians_search MCP tool is not registered"
+      ]
+    },
+    {
+      "id": 172,
+      "name": "connector-submit-runs-validation-gate",
+      "prompt": "[Beta connector active.] Trigger the AAE skill in submit mode with a thin prompt (driver only, no questions stated). Proceed through review without filling the Questions field and say 'submit'.",
+      "expected_output": "Step 4.5 runs validate_submission.py on the connector submit path, not only the artifact path. The empty/placeholder Questions field is rejected (placeholder_unfilled / missing) and the skill re-prompts for 3-5 questions (1-3 for Faculty Poll) before any ians_request_aae call. The submission is blocked until valid. As defense in depth the connector itself rejects an unfilled-placeholder or blank question server-side, but the skill must not rely on that. Linked to DAAS-169 (same root rule, different surface).",
+      "files": [],
+      "notes": "DAAS-172. Observed against the Beta connector. Client-side gate covered by evals/tests/test_validate_submission.py; server-side guard covered by ians-mcp test/tools/request-aae.test.js.",
+      "structural_checklist": [
+        "Validation gate (Step 4.5) runs on the connector submit path, not only the artifact path",
+        "placeholder_unfilled and empty-field rejections block the ians_request_aae call",
+        "Verified end-to-end against the Beta connector with the thin-prompt repro",
+        "Linked to the placeholder-survives bug as related (same root rule, different surface)"
+      ]
+    },
+    {
+      "id": 174,
+      "name": "questions-always-must-ask",
+      "prompt": "Submit an AAE — here's the gist: we need help with our zero-trust rollout sequencing and which controls to prioritize first.",
+      "expected_output": "Step 3 treats Specific Questions as must_ask on every run. The placeholder + prompt render above any Claude-drafted questions, and the draft renders inside a 'suggested starting point' callout — clearly a suggestion. Each question shows a ({len}/{cap}) counter, with a section total below the list. The counter reflects the locked payload value, not just typed input. The field does not lock until the user explicitly confirms or rewrites the questions; saying 'submit' without acknowledging the questions re-prompts for confirmation.",
+      "files": [],
+      "notes": "DAAS-174. Questions in the user's own words get better faculty answers; a silently-accepted draft traces back to Claude, not the user.",
+      "structural_checklist": [
+        "Step 3 SKILL.md spec documents always-must_ask for Questions",
+        "Each question renders with a ({len}/{cap}) counter",
+        "Section total renders below the list",
+        "Counter reflects the locked payload value, not just typed input",
+        "Field does not lock without explicit user confirmation"
+      ]
+    },
+    {
+      "id": 175,
+      "name": "aae-recommendation-includes-tied-rationale",
+      "prompt": "[Chained-skill scenario] Another Ask IANS Skill hits the limit of unsupervised synthesis on a post-breach litigation-prep question and recommends an AAE.",
+      "expected_output": "Whenever an AAE is recommended — self-triggered or chained — the skill leads with a one-line rationale tied to the specific signal in the conversation, in the format 'Faculty review fits here because {signal} — {what a faculty member adds that the AI can't}.' Generic 'you might want to talk to an expert' framing fails. The rationale ties to a concrete conversational signal (e.g., post-breach litigation exposure), not a generic value-prop.",
+      "files": [],
+      "notes": "DAAS-175. Applies to self-triggered and chained invocations.",
+      "structural_checklist": [
+        "SKILL.md documents the always-rationale rule with the format and 2-3 examples",
+        "Rule applies to self-triggered and chained invocations",
+        "Rationale ties to a specific signal in the conversation, not a generic value-prop",
+        "Skill never recommends an AAE without a tied rationale"
+      ]
+    },
+    {
+      "id": 182,
+      "name": "connector-default-no-website-redirect",
+      "prompt": "[Beta connector active + AAE entitlement.] Ask the skill to submit an AAE about board reporting metrics.",
+      "expected_output": "With the IANS MCP connected and entitlement present, the skill drafts the AAE, presents the form-shaped review, and submits via the connector after confirmation. It does NOT direct the user to the AAE form on iansresearch.com to fill out manually. Website redirect is never the default; the only fallback when ians_request_aae is unregistered is the Option B JSON artifact, not a web-form redirect. The Beta connector is recognized as available in Step 0.",
+      "files": [],
+      "notes": "DAAS-182. Reported by Kate Lombard (Cowork Chat #3). Submit via connector is the default; website redirect is not a path this skill offers when the connector is available.",
+      "structural_checklist": [
+        "Connector + entitlement detection in Step 0 recognizes the Beta connector",
+        "Default path is connector submission, not website redirect",
+        "Website redirect never fires; Option B artifact is the only fallback when the tool is unregistered",
+        "Review/edit/enhance affordance preserved before submit"
+      ]
+    },
+    {
+      "id": 183,
+      "name": "post-submit-references-client-services",
+      "prompt": "[Post-submit message check.] Complete an AAE submission and read the confirmation.",
+      "expected_output": "The post-submit confirmation references IANS Client Services as the contact point: 'You'll hear from an IANS Client Services coordinator within {window} business days.' It does NOT say the user will hear back from faculty. The same correction holds across the connector-success message and the close (Step 6).",
+      "files": [],
+      "notes": "DAAS-183. Reported by Kate Lombard. Faculty produce the deliverable but IANS Client Services coordinates the response loop.",
+      "structural_checklist": [
+        "Post-submit message references IANS Client Services, not faculty",
+        "Correction applied across the connector-success message and the close",
+        "Turnaround window restated in the confirmation"
+      ]
+    },
+    {
+      "id": 184,
+      "name": "turnaround-windows-always-surfaced",
+      "prompt": "Set up an AAE call about SOC tooling — no particular deadline.",
+      "expected_output": "At the Expedite section the skill surfaces both the standard and expedited turnaround windows for the selected resolution, regardless of whether a deadline was set: Faculty Poll 4-6 business days standard, Phone/Undecided 8-12 business days standard, expedited prioritized. The windows render even with no deadline. The post-submit confirmation restates the expected window. Wording matches what IANS Client Services communicates to clients.",
+      "files": [],
+      "notes": "DAAS-184. Reported by Kate Lombard — windows only appeared when Phone was selected, so she couldn't compare expedited vs standard timing.",
+      "structural_checklist": [
+        "Expedite section shows standard and expedited windows for the selected resolution",
+        "Windows render whether or not a deadline is set",
+        "Post-submit confirmation restates the expected window",
+        "Wording aligned with IANS Client Services"
       ]
     }
   ]

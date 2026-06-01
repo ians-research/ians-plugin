@@ -11,13 +11,17 @@ told the user it was sent. This script is the client-side gate.
 The required-field matrix mirrors the platform AAE form:
 
   resolution         required, in {Phone, Faculty Poll, Undecided}
-  driver             required, non-empty after trim, len ≤ resolution cap
-  question           required, 1-3 items (Faculty Poll) or 3-5 items
-                     (Phone/Undecided); each numbered or newline-separated;
+  driver             required, non-empty after trim, not an unfilled
+                     placeholder, len ≤ resolution cap
+  question           required, accepts list[str] or a (sub-label-stripped)
+                     string; 1-3 items (Faculty Poll) or 3-5 items
+                     (Phone/Undecided); no item may be an unfilled placeholder;
                      total len ≤ resolution cap
   details            optional; if present, len ≤ 500. Forbidden for Faculty Poll.
-  guidance           required for Phone/Undecided, ≥1 of {Strategic, Technical}.
-                     Forbidden for Faculty Poll.
+  guidance           required for Phone/Undecided, ≥1 of the canonical picklist
+                     values {"Strategic / Executive", "Technical / Tactical"}.
+                     Short-form aliases ("Strategic") are accepted with a
+                     normalization warning. Forbidden for Faculty Poll.
   email_address      required, must look like an email
   expedite_request   required boolean (defaults to False if absent)
   deadline           required iff expedite_request=True; must be ISO date ≥ today
@@ -53,6 +57,15 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from aae_common import (
+    CANONICAL_GUIDANCE,
+    canonicalize_questions,
+    count_questions,
+    guidance_to_list,
+    is_placeholder,
+    normalize_guidance,
+)
+
 PHONE_DRIVER_CAP = 1000
 PHONE_QUESTION_CAP = 1000
 DETAILS_CAP = 500
@@ -67,37 +80,12 @@ PHONE_QUESTION_COUNT = (3, 5)
 FP_QUESTION_COUNT = (1, 3)
 
 VALID_RESOLUTIONS = {"Phone", "Faculty Poll", "Undecided"}
-VALID_GUIDANCE = {"Strategic", "Technical"}
+VALID_GUIDANCE = set(CANONICAL_GUIDANCE)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 Issue = dict  # {"field": str, "code": str, "message": str}
-
-
-def _count_questions(question_text: str) -> int:
-    """Count numbered or newline-separated questions in the field.
-
-    Args:
-        question_text: The raw question text to inspect.
-
-    Returns:
-        Best-effort count of distinct questions in *question_text*.
-    """
-    if not question_text:
-        return 0
-    text = question_text.strip()
-    # Prefer counting numbered items "1. ", "2. " etc.
-    numbered = re.findall(r"(?m)^\s*\d+[\.\)]\s+", text)
-    if numbered:
-        return len(numbered)
-    # Fallback: count non-empty lines.
-    lines = [ln for ln in text.splitlines() if ln.strip()]
-    if lines:
-        return len(lines)
-    # Last resort: count "?" terminators.
-    qmarks = text.count("?")
-    return max(qmarks, 1) if text else 0
 
 
 def _resolve_resolution(payload: dict) -> tuple[str, list[Issue], list[Issue]]:
@@ -144,6 +132,16 @@ def _check_driver(payload: dict, driver_cap: int, resolution: str) -> list[Issue
             "code": "missing",
             "message": "Driver and context is required.",
         })
+    elif is_placeholder(driver):
+        errors.append({
+            "field": "driver",
+            "code": "placeholder_unfilled",
+            "message": (
+                "Driver still holds the review placeholder text — it was never "
+                "filled in. Ask the user what's driving this request before "
+                "submission."
+            ),
+        })
     elif driver.startswith("Topic:") and len(driver) < TOPIC_SEED_LEN:
         errors.append({
             "field": "driver",
@@ -163,19 +161,41 @@ def _check_driver(payload: dict, driver_cap: int, resolution: str) -> list[Issue
     return errors
 
 
-def _normalize_question(payload: dict) -> tuple[str, int]:
-    question = (payload.get("question") or "").strip()
-    if isinstance(payload.get("questions"), list):
-        q_list = [q.strip() for q in payload["questions"] if q and q.strip()]
-        return "\n".join(f"{i + 1}. {q}" for i, q in enumerate(q_list)), len(q_list)
-    return question, _count_questions(question)
+def _raw_question_value(payload: dict) -> object:
+    # Prefer the canonical `question` key; fall back to a `questions` list.
+    value = payload.get("question")
+    if value in (None, "", []) and isinstance(payload.get("questions"), list):
+        return payload.get("questions")
+    return value
+
+
+def _question_has_placeholder(value: object) -> bool:
+    if isinstance(value, (list, tuple)):
+        return any(is_placeholder(item) for item in value)
+    return is_placeholder(value)
 
 
 def _check_question(
     payload: dict, question_cap: int, count_range: tuple[int, int], resolution: str,
 ) -> list[Issue]:
     errors: list[Issue] = []
-    question, question_count = _normalize_question(payload)
+    raw_value = _raw_question_value(payload)
+
+    # An unfilled placeholder is never valid content — check before normalizing
+    # (DAAS-169). List-form fields are checked item by item, not just the container.
+    if _question_has_placeholder(raw_value):
+        errors.append({
+            "field": "question",
+            "code": "placeholder_unfilled",
+            "message": (
+                "Specific questions still hold the review placeholder text — "
+                "the field was never filled in. The user must provide their "
+                "questions before submission."
+            ),
+        })
+        return errors
+
+    question, question_count = canonicalize_questions(raw_value), count_questions(raw_value)
     if not question:
         errors.append({
             "field": "question",
@@ -219,7 +239,9 @@ def _check_question(
 def _check_details(payload: dict, is_fp: bool) -> list[Issue]:  # noqa: FBT001
     errors: list[Issue] = []
     details = (payload.get("details") or "").strip()
-    if not details:
+    # Details is optional; an unfilled "[optional — …]" placeholder counts as
+    # empty, not as submittable content (DAAS-169).
+    if not details or is_placeholder(details):
         return errors
     if is_fp:
         errors.append({
@@ -236,36 +258,65 @@ def _check_details(payload: dict, is_fp: bool) -> list[Issue]:  # noqa: FBT001
     return errors
 
 
-def _check_guidance(payload: dict, is_fp: bool, resolution: str) -> list[Issue]:  # noqa: FBT001
+def _check_guidance(
+    payload: dict,
+    is_fp: bool,  # noqa: FBT001
+    resolution: str,
+) -> tuple[list[Issue], list[Issue]]:
     errors: list[Issue] = []
-    guidance = payload.get("guidance") or []
-    if isinstance(guidance, str):
-        guidance = [g.strip() for g in guidance.split(";") if g.strip()]
+    warnings: list[Issue] = []
+    raw = guidance_to_list(payload.get("guidance"))
 
     if is_fp:
-        if guidance:
+        if raw:
             errors.append({
                 "field": "guidance",
                 "code": "not_allowed",
                 "message": "Faculty Poll does not collect guidance; remove it.",
             })
-        return errors
+        return errors, warnings
 
-    if not guidance:
+    # An unfilled placeholder is not a guidance selection (DAAS-169).
+    if any(is_placeholder(item) for item in raw):
+        errors.append({
+            "field": "guidance",
+            "code": "placeholder_unfilled",
+            "message": (
+                "Guidance still holds the review placeholder — pick "
+                f"{sorted(VALID_GUIDANCE)} before submission."
+            ),
+        })
+        return errors, warnings
+
+    if not raw:
         errors.append({
             "field": "guidance",
             "code": "missing",
             "message": f"{resolution} requires at least one of {sorted(VALID_GUIDANCE)}.",
         })
-    else:
-        unknown = [g for g in guidance if g not in VALID_GUIDANCE]
-        if unknown:
-            errors.append({
-                "field": "guidance",
-                "code": "invalid_value",
-                "message": f"Unknown guidance values: {unknown}. Allowed: {sorted(VALID_GUIDANCE)}.",
-            })
-    return errors
+        return errors, warnings
+
+    # Accept short-form aliases ("Strategic") but normalize to the canonical
+    # Salesforce picklist values and warn so the skill can rewrite the payload
+    # before submission (DAAS-168).
+    canonical, normalized_from_alias, unknown = normalize_guidance(raw)
+    if unknown:
+        errors.append({
+            "field": "guidance",
+            "code": "invalid_value",
+            "message": f"Unknown guidance values: {unknown}. Allowed: {sorted(VALID_GUIDANCE)}.",
+        })
+    if normalized_from_alias:
+        warnings.append({
+            "field": "guidance",
+            "code": "normalized",
+            "message": (
+                "Guidance uses short-form values; canonical Salesforce picklist "
+                f"labels are {list(canonical)}. Rewrite the payload to the "
+                "canonical form before submission."
+            ),
+        })
+    return errors, warnings
 
 
 def _check_email(payload: dict, whoami: dict) -> list[Issue]:
@@ -344,7 +395,16 @@ def _check_deadline(
     expedite = bool(payload.get("expedite_request"))
     deadline = payload.get("deadline")
     if expedite:
-        if not deadline:
+        if is_placeholder(deadline):
+            errors.append({
+                "field": "deadline",
+                "code": "placeholder_unfilled",
+                "message": (
+                    "Deadline still holds the review placeholder; provide a real "
+                    "YYYY-MM-DD date or clear the expedite flag."
+                ),
+            })
+        elif not deadline:
             errors.append({
                 "field": "deadline",
                 "code": "missing",
@@ -406,7 +466,9 @@ def validate(payload: dict, whoami: dict, today: date) -> dict:
     errors.extend(_check_driver(payload, driver_cap, resolution))
     errors.extend(_check_question(payload, question_cap, count_range, resolution))
     errors.extend(_check_details(payload, is_fp))
-    errors.extend(_check_guidance(payload, is_fp, resolution))
+    guidance_errors, guidance_warnings = _check_guidance(payload, is_fp, resolution)
+    errors.extend(guidance_errors)
+    warnings.extend(guidance_warnings)
     errors.extend(_check_email(payload, whoami))
 
     deadline_errors, deadline_warnings = _check_deadline(payload, today, is_fp)

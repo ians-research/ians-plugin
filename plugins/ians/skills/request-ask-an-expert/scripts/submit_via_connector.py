@@ -70,6 +70,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from aae_common import canonicalize_questions, normalize_guidance
+
 # Standard turnaround windows by resolution. Used to populate the
 # expected_response_window in mock and real responses.
 RESPONSE_WINDOWS = {
@@ -151,13 +153,18 @@ def build_connector_payload(payload: dict, idempotency_key: str) -> dict:
         The dict to send as the connector tool's input.
     """
     context = payload.get("context") or {}
+    # Emit the same canonical shape as the Option B artifact so both submit
+    # paths agree: question as the canonical "1. Q\n2. Q" string (DAAS-167) and
+    # guidance as the canonical Salesforce picklist labels (DAAS-168).
+    canonical_question = canonicalize_questions(payload.get("question"))
+    canonical_guidance, _normalized, _unknown = normalize_guidance(payload.get("guidance"))
     return {
         "schemaVersion": payload.get("schemaVersion", "1.0"),
         "resolution": payload.get("resolution"),
         "driver": payload.get("driver"),
-        "question": payload.get("question"),
+        "question": canonical_question,
         "details": payload.get("details"),
-        "guidance": payload.get("guidance") or [],
+        "guidance": canonical_guidance,
         "expedite_request": bool(payload.get("expedite_request")),
         "deadline": payload.get("deadline"),
         "availability": payload.get("availability"),

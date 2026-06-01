@@ -22,9 +22,11 @@ Input JSON shape:
   "question": "<the question text — typically the numbered list from draft_payload>"
 }
 
-Output JSON to stdout:
+Output JSON to stdout (guidance uses the canonical Salesforce picklist labels
+"Strategic / Executive" and "Technical / Tactical"):
 {
-  "guidance": ["Strategic", "Technical"] | ["Strategic"] | ["Technical"] | [],
+  "guidance": ["Strategic / Executive", "Technical / Tactical"]
+              | ["Strategic / Executive"] | ["Technical / Tactical"] | [],
   "scores": {"strategic": 0.0..1.0, "technical": 0.0..1.0},
   "reasoning": "<one-line rationale>",
   "matched_signals": {
@@ -39,6 +41,8 @@ import json
 import re
 import sys
 from pathlib import Path
+
+from aae_common import GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL
 
 # Strategic / Executive signals — business alignment, governance, leadership,
 # org-level prioritization, comms with execs/board.
@@ -160,7 +164,7 @@ def infer(question: str, threshold: float = 0.15) -> dict:
             t_top=", ".join(t_matches[:2]) or "technical signals",
         )
         return {
-            "guidance": ["Strategic", "Technical"],
+            "guidance": [GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL],
             "scores": {"strategic": s_score, "technical": t_score},
             "reasoning": reasoning,
             "matched_signals": {"strategic": s_matches, "technical": t_matches},
@@ -173,7 +177,7 @@ def infer(question: str, threshold: float = 0.15) -> dict:
             "technical implementation signal."
         ).format(sig=", ".join(s_matches[:2]) or "exec/governance signals")
         return {
-            "guidance": ["Strategic"],
+            "guidance": [GUIDANCE_STRATEGIC],
             "scores": {"strategic": s_score, "technical": t_score},
             "reasoning": reasoning,
             "matched_signals": {"strategic": s_matches, "technical": t_matches},
@@ -185,7 +189,7 @@ def infer(question: str, threshold: float = 0.15) -> dict:
             "strategic/exec signal."
         ).format(sig=", ".join(t_matches[:2]) or "technical signals")
         return {
-            "guidance": ["Technical"],
+            "guidance": [GUIDANCE_TECHNICAL],
             "scores": {"strategic": s_score, "technical": t_score},
             "reasoning": reasoning,
             "matched_signals": {"strategic": s_matches, "technical": t_matches},

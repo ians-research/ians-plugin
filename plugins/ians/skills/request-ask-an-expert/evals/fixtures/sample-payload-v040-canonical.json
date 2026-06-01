@@ -1,0 +1,29 @@
+{
+  "_comment": "INPUT fixture for the v0.4.0 canonical-shape feature (DAAS-167/168). `question` is intentionally a list and `guidance` uses short-form aliases so the scripts exercise canonicalize_questions() and normalize_guidance(); the canonical OUTPUT is what build_submission_artifact.py / validate_submission.py produce from it, e.g. question \"1. How exposed are we...\\n2. ...\" and guidance \"Strategic / Executive;Technical / Tactical\". Not an already-canonical payload.",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-05-30T16:00:00Z",
+  "generatedBy": "ask-ians-skills/request-ask-an-expert@0.4.0",
+  "resolution": "Phone",
+  "driver": "An active geopolitical conflict has our board asking how exposed we are to spillover cyber risk. The CISO needs a defensible position by the next board meeting because the audit committee has started asking about nation-state threat readiness.",
+  "question": [
+    "Cyberattacks — How exposed are we to nation-state spillover given our sector?",
+    "Energy & Supply Chain: How do we prioritize hardening across critical third parties?",
+    "Board reporting — What is the right way to frame this risk without overstating it?"
+  ],
+  "details": "Mid-size manufacturer, security team of 8, AWS-primary. NIST CSF program, NYDFS-adjacent customers.",
+  "guidance": ["Strategic", "Technical"],
+  "expedite_request": true,
+  "deadline": "2026-06-24",
+  "availability": "Tuesdays and Thursdays after 2pm ET, week of June 15 preferred",
+  "calendarlink": "https://calendly.com/dparizher",
+  "context": {
+    "ask_ians_id": null,
+    "related_ians_content": [
+      {"title": "Nation-State Threat Readiness", "url": "https://portal.iansresearch.com/sample-3"}
+    ]
+  },
+  "submitter": {
+    "name": "Dan Parizher",
+    "email": "dparizher@iansresearch.com"
+  }
+}
