@@ -77,23 +77,20 @@
     },
     {
       "id": 3,
-      "name": "submit-mode-option-b-submission-artifact",
+      "name": "connector-unavailable-graceful-failure",
       "prompt": "I want to submit an Ask-an-Expert about our PCI DSS 4.0 audit prep. We're a payments processor. Send it now via the IANS MCP, please.",
-      "expected_output": "Skill calls ians_whoami(). Submit mode is the default — no mode prompt shown. Skill builds the form-shaped review with verbatim platform-form labels and order: Resolution Type (with the three options' value descriptions), Driver and Context, Specific Questions, Other Details, Guidance Type, Expedite + Deadline, Email (read-only), Scheduling, Submitter (read-only). Recommends Phone with one-line reasoning. After user confirms, calls submit_via_connector.py — receives status:tool_not_registered. Falls back to build_submission_artifact.py and produces the .json file. Closing message tells the user to hand the artifact to their IANS account manager.",
+      "expected_output": "Skill calls ians_whoami(). Submit mode is the default. Skill builds the form-shaped review, user confirms, validate_submission.py passes, submit_via_connector.py returns status:connector_unavailable (ians_request_aae not registered or server_error). Skill surfaces the error inline and offers three options verbatim: Try again, Contact Client Services, Save as a scope draft. No JSON artifact is produced. Save as scope draft shows the Step 1 scope-deferral message. Skill does not fabricate success.",
       "files": [],
-      "notes": "v0.3+: Submit-by-default. Form-shaped review with verbatim platform-form labels.",
+      "notes": "DAAS-194. Replaces the former Option-B artifact fallback eval.",
       "structural_checklist": [
         "ians_whoami called",
         "Entitlement gate passed",
-        "Submit mode is default — no scope-vs-submit prompt shown",
-        "Form-shaped review uses verbatim platform-form labels (e.g., 'What is the driver and context behind this request?')",
-        "Resolution Type section includes three options with value descriptions matching the form",
-        "Draft reviewed and locked",
+        "validate_submission.py invoked before submit",
         "submit_via_connector.py invoked with payload",
-        "Response status is tool_not_registered",
-        "build_submission_artifact.py invoked as fallback",
-        ".json file produced with form-submission shape",
-        "Closing message tells user to hand the file to their IANS account manager"
+        "Response status is connector_unavailable",
+        "Three graceful-failure options surfaced verbatim",
+        "No JSON artifact produced",
+        "No silent continuation or fabricated case ID"
       ]
     },
     {
@@ -127,28 +124,22 @@
         "Connector-required message shown verbatim",
         "No drafting performed",
         "No file produced",
-        "No submission artifact constructed"
+        "No submission attempted without connector"
       ]
     },
     {
       "id": 19,
-      "name": "submission-artifact-shape-matches-form",
-      "prompt": "[Programmatic test for build_submission_artifact.py.] Given a fully-populated Phone payload and a whoami fixture, verify the script writes a .json file whose top-level keys match the platform AAE form's submission payload exactly.",
-      "expected_output": "build_submission_artifact.py exits 0 and writes a .json file at --output. Top-level keys (in this exact set, no others): resolution, driver, question, details, guidance, expedite_request, deadline, preferred_method, email_address, phone_number, alt_phone_number, availability, calendarlink, expectedCallLength, isUndecided, origin, ask_ians_id. For Phone resolution: details/guidance/availability/calendarlink populated; preferred_method='Phone'; expectedCallLength='60 Minutes'; isUndecided=false. For Faculty Poll resolution: details/guidance/availability/calendarlink are empty strings (not null); preferred_method='Email'; expectedCallLength=null; isUndecided=false. email_address comes from whoami. phone_number and alt_phone_number are null. origin is 'IANS MCP Claude'. guidance is the semicolon-delimited canonical Salesforce picklist labels — short-form input ['Strategic','Technical'] normalizes to 'Strategic / Executive;Technical / Tactical' (DAAS-168). question is the canonical '1. Q\\n2. Q' form regardless of whether the payload supplied a list or a string (DAAS-167).",
+      "name": "connector-payload-canonical-shape",
+      "prompt": "[Programmatic test for submit_via_connector.build_connector_payload.] Given a fully-populated Phone payload with list-shaped question and short-form guidance, verify the connector input uses canonical question string and canonical guidance array.",
+      "expected_output": "build_connector_payload emits question as canonical '1. Q\\n2. Q' string with sub-labels stripped, and guidance as ['Strategic / Executive', 'Technical / Tactical']. idempotency_key is passed through.",
       "files": [
         "fixtures/sample-payload-full.json"
       ],
-      "notes": "Replaces the earlier URL-encoding test. Validates that the artifact drops 1:1 into the platform form's submission shape, so IANS-side ingestion needs no translation.",
+      "notes": "Replaces the artifact-shape eval. Covered by evals/tests/test_submit_via_connector.py.",
       "structural_checklist": [
-        "Top-level keys match the platform AAE form's submission payload exactly",
-        "guidance is the canonical semicolon-delimited picklist labels (Strategic / Executive;Technical / Tactical), normalized from short form",
         "question serialized to canonical '1. Q\\n2. Q' form",
-        "Phone variant: expectedCallLength='60 Minutes', preferred_method='Phone', details/guidance/availability/calendarlink populated",
-        "Faculty Poll variant: expectedCallLength=null, preferred_method='Email', skipped fields are empty strings (not null)",
-        "email_address pulled from whoami",
-        "phone_number and alt_phone_number are null",
-        "origin is 'IANS MCP Claude'",
-        "isUndecided is true only for resolution=Undecided"
+        "guidance normalized to canonical Salesforce picklist labels",
+        "idempotency_key present on connector payload"
       ]
     },
     {
@@ -172,14 +163,14 @@
     {
       "id": 167,
       "name": "question-serializer-canonical-shape",
-      "prompt": "[Programmatic test for build_submission_artifact.py + validate_submission.py.] Given a payload whose question field is a list ['Cyberattacks — How exposed are we?', 'Energy & Supply Chain: How do we prioritize?', 'Reporting — How do we frame the risk?'], verify the artifact emits the canonical '1. Q\\n2. Q\\n3. Q' string with category sub-labels stripped, and that validate_submission.py counts three questions.",
+      "prompt": "[Programmatic test for validate_submission.py + submit_via_connector.build_connector_payload.] Given a payload whose question field is a list ['Cyberattacks — How exposed are we?', 'Energy & Supply Chain: How do we prioritize?', 'Reporting — How do we frame the risk?'], verify canonical question serialization and that validate_submission.py counts three questions.",
       "expected_output": "canonicalize_questions accepts the list and emits '1. How exposed are we?\\n2. How do we prioritize?\\n3. How do we frame the risk?' — leading em-dash and colon category labels removed, items renumbered. validate_submission.py accepts both the list shape and the pre-serialized string via the same canonical path; the question count is 3 (passes the Phone 3-5 range). fixtures/sample-payload-v040-canonical.json exercises the list shape end-to-end.",
       "files": [
         "fixtures/sample-payload-v040-canonical.json"
       ],
-      "notes": "DAAS-167. Covered programmatically by evals/tests/test_aae_common.py, test_build_submission_artifact.py, and test_validate_submission.py.",
+      "notes": "DAAS-167. Covered programmatically by evals/tests/test_aae_common.py, test_submit_via_connector.py, and test_validate_submission.py.",
       "structural_checklist": [
-        "build_submission_artifact.py accepts list[str] or a pre-serialized string and emits canonical '1. Q\\n2. Q\\n3. Q'",
+        "build_connector_payload accepts list[str] or a pre-serialized string and emits canonical '1. Q\\n2. Q\\n3. Q'",
         "Em-dash and colon sub-labels are stripped from the start of each question",
         "validate_submission.py accepts both shapes via the canonical payload schema",
         "fixtures/sample-payload-v040-canonical.json exercises the list shape"
@@ -188,14 +179,14 @@
     {
       "id": 168,
       "name": "guidance-canonical-picklist-values",
-      "prompt": "[Programmatic test for infer_guidance.py + build_submission_artifact.py + validate_submission.py.] Verify guidance is emitted as the canonical Salesforce picklist labels 'Strategic / Executive' and 'Technical / Tactical', and that short-form aliases are accepted but normalized.",
-      "expected_output": "infer_guidance.py returns ['Strategic / Executive'] / ['Technical / Tactical'] / both (never the short form). validate_submission.py accepts short-form aliases ('Strategic') as valid but emits a guidance 'normalized' warning instructing the skill to rewrite to canonical. build_submission_artifact.py writes the canonical semicolon-delimited form. Confirmed the SFDC picklist values match exactly (spaces around the slash).",
+      "prompt": "[Programmatic test for infer_guidance.py + validate_submission.py + submit_via_connector.build_connector_payload.] Verify guidance is emitted as the canonical Salesforce picklist labels 'Strategic / Executive' and 'Technical / Tactical', and that short-form aliases are accepted but normalized.",
+      "expected_output": "infer_guidance.py returns ['Strategic / Executive'] / ['Technical / Tactical'] / both (never the short form). validate_submission.py accepts short-form aliases ('Strategic') as valid but emits a guidance 'normalized' warning instructing the skill to rewrite to canonical. build_connector_payload writes the canonical array form. Confirmed the SFDC picklist values match exactly (spaces around the slash).",
       "files": [],
       "notes": "DAAS-168. SFDC picklists are strict; mismatched values silently drop the field. Covered by evals/tests/test_infer_guidance.py and test_validate_submission.py.",
       "structural_checklist": [
         "infer_guidance.py returns the canonical strings",
         "validate_submission.py accepts short-form aliases on input but normalizes and warns",
-        "build_submission_artifact.py writes the canonical form",
+        "build_connector_payload writes the canonical form",
         "SFDC picklist values match exactly: 'Strategic / Executive', 'Technical / Tactical'"
       ]
     },
@@ -304,13 +295,13 @@
       "id": 182,
       "name": "connector-default-no-website-redirect",
       "prompt": "[Beta connector active + AAE entitlement.] Ask the skill to submit an AAE about board reporting metrics.",
-      "expected_output": "With the IANS MCP connected and entitlement present, the skill drafts the AAE, presents the form-shaped review, and submits via the connector after confirmation. It does NOT direct the user to the AAE form on iansresearch.com to fill out manually. Website redirect is never the default; the only fallback when ians_request_aae is unregistered is the Option B JSON artifact, not a web-form redirect. The Beta connector is recognized as available in Step 0.",
+      "expected_output": "With the IANS MCP connected and entitlement present, the skill drafts the AAE, presents the form-shaped review, and submits via the connector after confirmation. It does NOT direct the user to the AAE form on iansresearch.com to fill out manually. When the connector is unavailable, the skill surfaces graceful failure options — not a website redirect and not a JSON artifact. The Beta connector is recognized as available in Step 0.",
       "files": [],
       "notes": "DAAS-182. Reported by Kate Lombard (Cowork Chat #3). Submit via connector is the default; website redirect is not a path this skill offers when the connector is available.",
       "structural_checklist": [
         "Connector + entitlement detection in Step 0 recognizes the Beta connector",
         "Default path is connector submission, not website redirect",
-        "Website redirect never fires; Option B artifact is the only fallback when the tool is unregistered",
+        "Website redirect never fires; connector_unavailable graceful failure when the tool cannot submit",
         "Review/edit/enhance affordance preserved before submit"
       ]
     },
@@ -318,27 +309,71 @@
       "id": 183,
       "name": "post-submit-references-client-services",
       "prompt": "[Post-submit message check.] Complete an AAE submission and read the confirmation.",
-      "expected_output": "The post-submit confirmation references IANS Client Services as the contact point: 'You'll hear from an IANS Client Services coordinator within {window} business days.' It does NOT say the user will hear back from faculty. The same correction holds across the connector-success message and the close (Step 6).",
+      "expected_output": "The post-submit confirmation references IANS Client Services as the contact point: coordinator contacts the client within 24-48 hours to schedule. Faculty turnaround (4-6 business days Faculty Poll, 8-12 Phone/Undecided) is presented as a separate downstream window — not conflated with first CS contact. It does NOT say the user will hear back from faculty. The same correction holds across the connector-success message and the close (Step 6).",
       "files": [],
       "notes": "DAAS-183. Reported by Kate Lombard. Faculty produce the deliverable but IANS Client Services coordinates the response loop.",
       "structural_checklist": [
         "Post-submit message references IANS Client Services, not faculty",
-        "Correction applied across the connector-success message and the close",
-        "Turnaround window restated in the confirmation"
+        "First CS contact window is 24-48 hours",
+        "Faculty turnaround presented as separate downstream window",
+        "Correction applied across the connector-success message and the close"
       ]
     },
     {
       "id": 184,
       "name": "turnaround-windows-always-surfaced",
       "prompt": "Set up an AAE call about SOC tooling — no particular deadline.",
-      "expected_output": "At the Expedite section the skill surfaces both the standard and expedited turnaround windows for the selected resolution, regardless of whether a deadline was set: Faculty Poll 4-6 business days standard, Phone/Undecided 8-12 business days standard, expedited prioritized. The windows render even with no deadline. The post-submit confirmation restates the expected window. Wording matches what IANS Client Services communicates to clients.",
+      "expected_output": "At the Expedite section the skill surfaces faculty turnaround windows for the selected resolution (Faculty Poll 4-6 business days, Phone/Undecided 8-12 business days, expedited prioritized), labeled as downstream after scheduling. First Client Services contact (24-48 hours) is stated separately. Windows render even with no deadline. Post-submit confirmation restates both windows distinctly.",
       "files": [],
       "notes": "DAAS-184. Reported by Kate Lombard — windows only appeared when Phone was selected, so she couldn't compare expedited vs standard timing.",
       "structural_checklist": [
-        "Expedite section shows standard and expedited windows for the selected resolution",
+        "Expedite section shows faculty turnaround windows for the selected resolution",
+        "24-48 hour CS scheduling window stated separately from faculty turnaround",
         "Windows render whether or not a deadline is set",
-        "Post-submit confirmation restates the expected window",
-        "Wording aligned with IANS Client Services"
+        "Post-submit confirmation restates both windows distinctly"
+      ]
+    },
+    {
+      "id": 194,
+      "name": "no-json-artifact-fallback",
+      "prompt": "[Programmatic test for submit_via_connector.py graceful failure.] Force --mock-tool-not-registered and verify status:connector_unavailable with retry, contact_client_services, and save_scope_draft options.",
+      "expected_output": "submit_via_connector.py returns status:connector_unavailable, user_message, options array with all three graceful-failure choices, retryable:true. No artifact path referenced.",
+      "files": [],
+      "notes": "DAAS-194. Covered by evals/tests/test_submit_via_connector.py.",
+      "structural_checklist": [
+        "status is connector_unavailable",
+        "options includes retry, contact_client_services, save_scope_draft",
+        "No build_submission_artifact.py invocation",
+        "server_error maps to connector_unavailable"
+      ]
+    },
+    {
+      "id": 196,
+      "name": "faculty-poll-phone-nudge",
+      "prompt": "Set up a Faculty Poll about whether we should adopt zero-trust segmentation, which vendors peers prefer, and how to prioritize identity vs network controls — we need a defensible board position with trade-offs explained.",
+      "expected_output": "User selects or skill recommends Faculty Poll. check_poll_fit.py flags decision-oriented / multi-topic shape. Skill surfaces the verbatim Phone nudge. User can accept switch to Phone or keep Poll; both paths proceed. If user keeps Poll despite nudge, skill notes the decline internally.",
+      "files": [],
+      "notes": "DAAS-196 / DAAS-208. Covered by evals/tests/test_check_poll_fit.py.",
+      "structural_checklist": [
+        "check_poll_fit.py run when Faculty Poll selected",
+        "Nudge fires only when heuristic matches",
+        "User can accept switch or keep Poll",
+        "Nudge wording matches SKILL.md verbatim",
+        "Keep-Poll path fully supported"
+      ]
+    },
+    {
+      "id": 207,
+      "name": "post-submit-timing-24-48-hours",
+      "prompt": "[Post-submit message check after successful connector submit.] Complete an AAE Phone submission and read the confirmation.",
+      "expected_output": "Confirmation states an IANS Client Services coordinator will contact the user within 24-48 hours to schedule. Faculty turnaround (8-12 business days for Phone) is a separate downstream window — NOT used as the first-contact promise. Does not say 'hear from coordinator within 8-12 business days'.",
+      "files": [],
+      "notes": "DAAS-207. Faculty check-in 2026-05-29. CS scheduling is 24-48 hours; 8-12 is faculty turnaround after scheduling.",
+      "structural_checklist": [
+        "First CS contact window is 24-48 hours",
+        "Faculty turnaround is separate downstream window",
+        "8-12 business days not used as first-contact promise",
+        "Step 5 and Step 6 wording aligned"
       ]
     }
   ]

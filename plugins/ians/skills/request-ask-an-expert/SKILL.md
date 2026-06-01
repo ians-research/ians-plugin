@@ -1,6 +1,6 @@
 ---
 name: request-ask-an-expert
-description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS Research. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write when `ians_request_aae` returns a successful submission, or a JSON submission artifact in the platform AAE form's submission shape that IANS can ingest directly. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
+description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS Research. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write through `ians_request_aae`. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
 metadata:
   version: "1.0.0"
   description_short: "Submit a faculty-led Ask-an-Expert request to IANS Research. Use when the user wants to schedule an AAE call, request faculty time, or escalate a question to IANS expert review."
@@ -8,7 +8,7 @@ metadata:
 
 # Request Ask-an-Expert
 
-Conversational form-filler for the IANS platform Ask-an-Expert form. This release is **submit-only**: the skill drafts what it can from conversation context, presents a **form-shaped review** that mirrors the platform form's labels and order, lets the user edit fields in chat, validates, then submits or produces a JSON artifact.
+Conversational form-filler for the IANS platform Ask-an-Expert form. This release is **submit-only**: the skill drafts what it can from conversation context, presents a **form-shaped review** that mirrors the platform form's labels and order, lets the user edit fields in chat, validates, then submits via the IANS MCP connector.
 
 User-facing prompts are quoted verbatim in this SKILL.md. Use the exact text — do not paraphrase. Consistency in wording matters; users learn the prompts and rely on them.
 
@@ -123,6 +123,23 @@ Examples:
 
 The rationale must tie to a **specific signal** in the conversation, not a generic value-prop. Generic framing like "you might want to talk to an expert" is not enough.
 
+**Faculty Poll mis-scope nudge (DAAS-196).** When the user selects **Faculty Poll**, run `scripts/check_poll_fit.py` against the drafted questions (and driver if present):
+
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/check_poll_fit.py \
+  --input <path-to-questions-json>
+```
+
+Input shape: `{"questions": <locked or draft question value>, "driver": "<optional driver>"}`.
+
+If `suggest_phone` is true, surface this nudge verbatim (suggestion only — Poll remains the default):
+
+> This reads more like a discussion than a poll — want me to switch to Phone? Faculty can go deeper in a call.
+
+- If the user accepts the switch, change resolution to Phone and re-render the form-shaped review with Phone/Undecided sections.
+- If the user keeps Poll, proceed with Faculty Poll unchanged — both paths are fully supported.
+- When the user keeps Poll despite the nudge, note internally that the nudge fired and was declined (for heuristic tuning later). Do not block submission.
+
 ### What challenge do you want to discuss?
 
 #### Driver and Context — *"What is the driver and context behind this request?"*
@@ -175,12 +192,14 @@ Skip section entirely for Faculty Poll.
 
 **Always surface the turnaround windows here**, before the user decides — they can't make an informed expedite choice without seeing the comparison. Render the windows for the selected resolution whether or not a deadline has been parsed:
 
-> **Turnaround for {resolution}:** {standard} business days standard; expedited requests are prioritized.
+> **Turnaround for {resolution}:** {standard} business days standard (faculty deliverable, after scheduling); expedited requests are prioritized.
 
-Canonical windows (must match what IANS Client Services communicates to clients):
+Canonical **faculty turnaround** windows (downstream, after Client Services schedules — must match what IANS Client Services communicates to clients):
 
 - **Faculty Poll:** 4-6 business days standard, expedited prioritized.
 - **Phone / Undecided:** 8-12 business days standard, expedited prioritized.
+
+**First Client Services contact** is separate: an IANS Client Services coordinator reaches out within **24-48 hours** to schedule — do not conflate that scheduling window with the faculty turnaround above.
 
 If yes, render:
 
@@ -237,11 +256,11 @@ If the user replies with edits, apply them, re-render the affected fields with u
 
 ## Step 4.5 — Required-field validation gate
 
-**Hard rule — script execution is non-negotiable.** Before any call to `submit_via_connector.py` or `build_submission_artifact.py`, you MUST run `validate_submission.py` on the locked payload and check its exit code. Do NOT skip this step, do NOT eyeball validation, do NOT decide a field "looks fine" without running the script. The platform AAE form has required fields; the connector validates server-side but only after the user has been told the request was sent. This step is the client-side gate.
+**Hard rule — script execution is non-negotiable.** Before any call to `submit_via_connector.py`, you MUST run `validate_submission.py` on the locked payload and check its exit code. Do NOT skip this step, do NOT eyeball validation, do NOT decide a field "looks fine" without running the script. The platform AAE form has required fields; the connector validates server-side but only after the user has been told the request was sent. This step is the client-side gate.
 
-**This gate runs on BOTH submit paths.** It is not artifact-only. The live connector (`ians_request_aae`) is a distinct surface from the Option B JSON artifact, and an incomplete Specific Questions field reaching the connector still creates a real IANS case. Run `validate_submission.py` and require `valid: true` before *either* `submit_via_connector.py` (Option A) or `build_submission_artifact.py` (Option B). A `placeholder_unfilled` or empty required field MUST block the `ians_request_aae` call, not just the artifact write. (The connector also rejects unfilled placeholders server-side as defense in depth, but never rely on that — it errors only after the user thinks the request was sent.)
+Run `validate_submission.py` and require `valid: true` before calling `ians_request_aae` (via `submit_via_connector.py` or a direct MCP tool call). A `placeholder_unfilled` or empty required field MUST block the connector call. (The connector also rejects unfilled placeholders server-side as defense in depth, but never rely on that — it errors only after the user thinks the request was sent.)
 
-Write the locked payload to a temp JSON (the same one Step 5 will pass to the connector / artifact builder), then call:
+Write the locked payload to a temp JSON (the same one Step 5 will pass to the connector), then call:
 
 ```bash
 python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/validate_submission.py \
@@ -275,50 +294,52 @@ After listing errors, ask verbatim:
 
 Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed to Step 5 when `valid: true`.
 
-## Step 5 — Submit: route through connector or artifact
+## Step 5 — Submit via connector
 
 **Precondition: Step 4.5 must have returned `valid: true`.** If you somehow reach this step without running validation, stop and run Step 4.5 first.
 
-**Hard rule — connector submission is the default; never redirect to the web form.** When the IANS MCP is connected (Step 0 passed) and the user is entitled (Step 2 passed), this skill submits **through the connector**. Do NOT tell the user to go fill out the Ask-an-Expert form on iansresearch.com, and do NOT hand them a website link in place of submitting — that is not a path this skill offers when the connector is available. The Beta connector counts as available: if `ians_request_aae` is registered, use it. The **only** fallback when the connector write path is not live is Option B (the JSON submission artifact below) — never a website redirect.
+**Hard rule — connector submission is the only write path; never redirect to the web form.** When the IANS MCP is connected (Step 0 passed) and the user is entitled (Step 2 passed), this skill submits **through the connector**. Do NOT tell the user to go fill out the Ask-an-Expert form on iansresearch.com, and do NOT hand them a website link in place of submitting. The Beta connector counts as available: if `ians_request_aae` is registered, use it.
 
-**Hard rule — script execution is non-negotiable.** You MUST execute `submit_via_connector.py` and (on `tool_not_registered` or when the connector response indicates the write path is not live yet) `build_submission_artifact.py` via the Bash tool. Do NOT generate the JSON artifact inline, "describe" the file as if it exists, or invent your own field names — the platform AAE form's submission shape is locked and only `build_submission_artifact.py` produces it correctly. Any inline JSON is wrong and will be rejected by IANS-side ingestion. If the Bash call fails, surface the error to the user; do not fabricate success.
+**Hard rule — script execution is non-negotiable.** You MUST execute `submit_via_connector.py` via the Bash tool (or call `ians_request_aae` directly when the runtime supports it). Do NOT fabricate a case ID, tracking URL, or success message. If the connector call fails, surface the error inline — never continue silently or pretend the request was sent.
 
-1. Try the connector:
+1. Submit through the connector:
 
    ```bash
    python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/submit_via_connector.py \
      --payload <path-to-payload.json>
    ```
 
-2. **Status `submitted`** (Option A — connector accepted the request): surface verbatim:
-   > Your Ask-an-Expert request has been submitted. **Case:** {case_id}. You'll hear from an IANS Client Services coordinator within {window.business_days_min}-{window.business_days_max} business days. Track status: {tracking_url}
-3. **Status `tool_not_registered`** or any connector response that means the server write is not yet available (including a live MCP `ians_request_aae` call that returns `status: pending` with no case): produce the JSON artifact (Option B):
-   - Ask the user where to save (default workspace folder).
-   - Filename: `AAE-Submission-{shortSubject}-{YYYYMMDD}.json`.
-   - Call:
+   When `ians_request_aae` is registered in the MCP session, call the tool directly with the canonical connector payload — the **Input** shape documented in the Connector contract below, which is the same shape `submit_via_connector.py` builds before invoking the tool.
 
-     ```bash
-     python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/build_submission_artifact.py \
-       --payload <path> \
-       --output <user-chosen-path>/AAE-Submission-{slug}-{YYYYMMDD}.json \
-       --client-name Claude \
-       --whoami <path-to-whoami>
-     ```
+2. **Status `submitted`** — connector accepted the request. Surface verbatim:
 
-   - Surface verbatim:
-     > I've saved your submission as a JSON artifact at {path}. Hand this to your IANS account manager — they can submit it on your behalf. Once `ians_request_aae` ships end-to-end, future submissions will go directly to IANS without this file step.
-4. **Status `error`**: read `error_code` and surface `user_message`:
+   > Your Ask-an-Expert request has been submitted. **Case:** {case_id}. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is typically **{faculty_window}** ({4-6 business days for Faculty Poll | 8-12 business days for Phone/Undecided}). Track status: {tracking_url}
+
+3. **Status `connector_unavailable`** — the connector could not accept the submission (`tool_not_registered`, `server_error`, or equivalent). Surface the error **inline** and offer these three options verbatim:
+
+   > I couldn't submit your Ask-an-Expert request through the IANS connector right now. Your draft is still here — what would you like to do?
+   >
+   > 1. **Try again** — I'll retry the submission.
+   > 2. **Contact Client Services** — reach your IANS account manager or Client Services team to submit manually.
+   > 3. **Save as a scope draft** — hold the draft for now.
+
+   - **Try again:** re-run `submit_via_connector.py` / `ians_request_aae` once. Do not auto-retry in a loop.
+   - **Contact Client Services:** end gracefully; the user's locked draft remains in chat for them to copy or reference.
+   - **Save as a scope draft:** show the Step 1 scope-deferral message verbatim (*"Scoping doc support is coming once the IANS design system skill ships — for now I can only submit on your behalf or pause."*) and stop. Do not fabricate a .docx.
+
+4. **Status `error`** — read `error_code` and surface `user_message`:
    - `entitlement_missing` — defect (gate should have caught it). Surface message, end.
    - `validation_failed` — return to Step 4 with `details` shown so the user revises.
    - `rate_limited` — surface message, don't auto-retry.
-   - `server_error` — fall through to Option B (artifact path).
 
 ## Step 6 — Confirm and close
 
 End with:
 
 1. Clear statement of what just happened.
-2. Expected timeline for the resolution type, restating the turnaround window (4-6 business days for Faculty Poll, 8-12 for Phone/Undecided).
+2. Expected timeline with **two separate windows** (do not conflate them):
+   - **Client Services scheduling:** an IANS Client Services coordinator contacts you within **24-48 hours**.
+   - **Faculty turnaround** (after scheduling): **4-6 business days** for Faculty Poll, **8-12 business days** for Phone/Undecided.
 3. Standard advisory disclaimer (below).
 
 **Who follows up:** the response loop is coordinated by **IANS Client Services**, not by faculty directly. Faculty produce the deliverable; IANS Client Services contacts the client. When you tell the user who they'll hear from, say "an IANS Client Services coordinator" — never "you'll hear back from faculty."
@@ -331,12 +352,12 @@ Don't promise specific faculty members or specific dates.
 
 ## Connector contract
 
-`ians_request_aae` may register on the IANS MCP before the full write path is live; until Option A returns `submitted` with `case_id`, this skill uses Option B (JSON submission artifact) by default.
+`ians_request_aae` submits directly to IANS when the connector is available. There is no JSON-artifact fallback — when the connector is unavailable, the skill surfaces graceful failure options (retry, contact Client Services, save as scope draft).
 
-- **Input** matches the JSON shape the platform AAE form posts. `origin` and `submitter` are server-populated, NOT in the input.
-- **Output**: `case_id`, `tracking_url`, `expected_response_window`, `submitted_at`, `status`.
-- **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`, `server_error`.
-- **Idempotency**: optional `idempotency_key` prevents duplicate cases on retry.
+- **Input** matches the JSON shape the platform AAE form posts. `origin` and `submitter` are server-populated, NOT in the skill's input.
+- **Output**: `status: "submitted"`, `case_id`, `tracking_url`, `expected_response_window`, `submitted_at`, `idempotency_key`.
+- **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`; transient/unavailable paths return `connector_unavailable` with retry/contact/scope-draft options.
+- **Idempotency**: `idempotency_key` prevents duplicate cases on retry.
 
 ## Chain pattern — invoked from another skill
 
@@ -367,11 +388,11 @@ A chained invocation must still lead with the one-line rationale from Step 3 ("F
 ## Scripts
 
 - `scripts/recommend_resolution.py` — Heuristic resolution recommender (Phone / Faculty Poll / Undecided) with one-line reasoning.
+- `scripts/check_poll_fit.py` — Detects mis-scoped Faculty Poll questions; emits a suggestion-only Phone nudge (DAAS-196).
 - `scripts/draft_payload.py` — Extracts Driver / Question / Details from conversation transcript with cap and resolution-specific shape enforcement.
 - `scripts/infer_guidance.py` — Strategic / Technical inference. Empty array signals "must ask the user."
 - `scripts/parse_urgency.py` — Natural language urgency cues → `expedite_request` + ISO date.
 - `scripts/parse_scheduling.py` — Combined scheduling input → `availability` / `calendarlink` routing.
-- `scripts/build_submission_artifact.py` — Produces a JSON file in the platform AAE form's submission shape for IANS-side ingestion.
-- `scripts/submit_via_connector.py` — Wraps the `ians_request_aae` MCP tool. Falls back to artifact when not registered.
-- `scripts/validate_submission.py` — Required-field gate matching the platform AAE form's required rules. Run before any submit path; exit code 0 = valid, 1 = invalid. The skill MUST call this in Step 4.5 before invoking `submit_via_connector.py` or `build_submission_artifact.py`. Rejects unfilled review placeholders (`placeholder_unfilled`), canonicalizes the question shape, and normalizes short-form guidance to the canonical Salesforce picklist labels.
+- `scripts/submit_via_connector.py` — Wraps the `ians_request_aae` MCP tool. Returns `connector_unavailable` with graceful failure options when the connector cannot accept the submission.
+- `scripts/validate_submission.py` — Required-field gate matching the platform AAE form's required rules. Run before submit; exit code 0 = valid, 1 = invalid. The skill MUST call this in Step 4.5 before invoking `submit_via_connector.py`. Rejects unfilled review placeholders (`placeholder_unfilled`), canonicalizes the question shape, and normalizes short-form guidance to the canonical Salesforce picklist labels.
 - `scripts/aae_common.py` — Shared helpers imported by the scripts above: canonical question serialization (list or string → `"1. Q\n2. Q"`, sub-labels stripped), guidance canonicalization (`"Strategic / Executive"` / `"Technical / Tactical"`), and unfilled-placeholder detection. Not a CLI.

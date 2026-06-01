@@ -3,9 +3,8 @@
 IANS Request Ask-an-Expert — Submission Validator
 
 Enforces the platform AAE form's required-field rules on the canonical
-payload BEFORE the skill calls submit_via_connector.py or
-build_submission_artifact.py. The artifact builder accepts whatever it
-gets; the connector validates server-side but only after we've already
+payload BEFORE the skill calls submit_via_connector.py or ians_request_aae.
+The connector validates server-side but only after we've already
 told the user it was sent. This script is the client-side gate.
 
 The required-field matrix mirrors the platform AAE form:

@@ -1,5 +1,5 @@
 {
-  "_comment": "INPUT fixture for the v0.4.0 canonical-shape feature (DAAS-167/168). `question` is intentionally a list and `guidance` uses short-form aliases so the scripts exercise canonicalize_questions() and normalize_guidance(); the canonical OUTPUT is what build_submission_artifact.py / validate_submission.py produce from it, e.g. question \"1. How exposed are we...\\n2. ...\" and guidance \"Strategic / Executive;Technical / Tactical\". Not an already-canonical payload.",
+  "_comment": "INPUT fixture for the v0.4.0 canonical-shape feature (DAAS-167/168). `question` is intentionally a list and `guidance` uses short-form aliases so the scripts exercise canonicalize_questions() and normalize_guidance(); the canonical OUTPUT is what validate_submission.py / build_connector_payload produce from it, e.g. question \"1. How exposed are we...\\n2. ...\" and guidance [\"Strategic / Executive\", \"Technical / Tactical\"]. Not an already-canonical payload.",
   "schemaVersion": "1.0",
   "generatedAt": "2026-05-30T16:00:00Z",
   "generatedBy": "ask-ians-skills/request-ask-an-expert@0.4.0",
