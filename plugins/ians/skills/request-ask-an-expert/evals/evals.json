@@ -193,7 +193,7 @@
     {
       "id": 169,
       "name": "placeholder-unfilled-blocks-submission",
-      "prompt": "[Programmatic test for validate_submission.py.] Submit a payload where the Questions field still contains the literal placeholder '[needs your input — what 3-5 specific questions...]' (or is empty). Verify validation blocks before any artifact is written.",
+      "prompt": "[Programmatic test for validate_submission.py.] Submit a payload where the Questions field still contains the literal placeholder '[needs your input — what 3-5 specific questions...]' (or is empty). Verify validation blocks before submit.",
       "expected_output": "validate_submission.py returns valid:false with a 'placeholder_unfilled' error on the question field. The same code fires for a placeholder driver, a placeholder guidance value, and a placeholder deadline when expedited. Empty required fields are still rejected (missing). List-form question fields are checked item by item, not just the container. Exit code is 1.",
       "files": [],
       "notes": "DAAS-169. Covered by evals/tests/test_validate_submission.py PlaceholderUnfilledTest.",
@@ -252,11 +252,11 @@
       "id": 172,
       "name": "connector-submit-runs-validation-gate",
       "prompt": "[Beta connector active.] Trigger the AAE skill in submit mode with a thin prompt (driver only, no questions stated). Proceed through review without filling the Questions field and say 'submit'.",
-      "expected_output": "Step 4.5 runs validate_submission.py on the connector submit path, not only the artifact path. The empty/placeholder Questions field is rejected (placeholder_unfilled / missing) and the skill re-prompts for 3-5 questions (1-3 for Faculty Poll) before any ians_request_aae call. The submission is blocked until valid. As defense in depth the connector itself rejects an unfilled-placeholder or blank question server-side, but the skill must not rely on that. Linked to DAAS-169 (same root rule, different surface).",
+      "expected_output": "Step 4.5 runs validate_submission.py on the connector submit path. The empty/placeholder Questions field is rejected (placeholder_unfilled / missing) and the skill re-prompts for 3-5 questions (1-3 for Faculty Poll) before any ians_request_aae call. The submission is blocked until valid. As defense in depth the connector itself rejects an unfilled-placeholder or blank question server-side, but the skill must not rely on that. Linked to DAAS-169 (same root rule, different surface).",
       "files": [],
       "notes": "DAAS-172. Observed against the Beta connector. Client-side gate covered by evals/tests/test_validate_submission.py; server-side guard covered by ians-mcp test/tools/request-aae.test.js.",
       "structural_checklist": [
-        "Validation gate (Step 4.5) runs on the connector submit path, not only the artifact path",
+        "Validation gate (Step 4.5) runs on the connector submit path before ians_request_aae",
         "placeholder_unfilled and empty-field rejections block the ians_request_aae call",
         "Verified end-to-end against the Beta connector with the thin-prompt repro",
         "Linked to the placeholder-survives bug as related (same root rule, different surface)"

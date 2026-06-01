@@ -8,7 +8,7 @@ This repo publishes **Claude plugins** (skills + supporting assets). Plugins tha
 
 | Plugin | Skill | Description |
 | --- | --- | --- |
-| [`ians`](./plugins/ians) | [`request-ask-an-expert`](./plugins/ians/skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS. Form-shaped review, Python validation/submission helpers, JSON submission artifact when the direct connector path is not yet live. Submit-only in this release. |
+| [`ians`](./plugins/ians) | [`request-ask-an-expert`](./plugins/ians/skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS. Form-shaped review, Python validation/submission helpers, connector-only submit path with graceful failure when the MCP is unavailable. Submit-only in this release. |
 
 ## Installation
 
@@ -41,7 +41,7 @@ claude-skills/
         └── skills/
             └── request-ask-an-expert/
                 ├── SKILL.md
-                ├── scripts/        # draft, validate, submit, artifact
+                ├── scripts/        # draft, validate, submit, poll-fit check
                 └── evals/          # scenario fixtures (dev-only, not shipped)
 ```
 

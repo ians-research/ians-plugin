@@ -123,7 +123,9 @@ Examples:
 
 The rationale must tie to a **specific signal** in the conversation, not a generic value-prop. Generic framing like "you might want to talk to an expert" is not enough.
 
-**Faculty Poll mis-scope nudge (DAAS-196).** When the user selects **Faculty Poll**, run `scripts/check_poll_fit.py` against the drafted questions (and driver if present):
+**Faculty Poll mis-scope nudge (DAAS-196 / DAAS-208).** Run this check **only when the user selects Faculty Poll** — do not run `check_poll_fit.py` for Phone or Undecided resolutions.
+
+When the user selects **Faculty Poll**, run `scripts/check_poll_fit.py` against the drafted questions (and driver if present):
 
 ```bash
 python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/check_poll_fit.py \
@@ -138,7 +140,11 @@ If `suggest_phone` is true, surface this nudge verbatim (suggestion only — Pol
 
 - If the user accepts the switch, change resolution to Phone and re-render the form-shaped review with Phone/Undecided sections.
 - If the user keeps Poll, proceed with Faculty Poll unchanged — both paths are fully supported.
-- When the user keeps Poll despite the nudge, note internally that the nudge fired and was declined (for heuristic tuning later). Do not block submission.
+- When the user keeps Poll despite the nudge, emit this internal note verbatim (for heuristic tuning later; not shown to the user):
+
+  > `[poll_nudge_declined] signals={matched_signals from check_poll_fit output} resolution=Faculty Poll`
+
+  Do not block submission.
 
 ### What challenge do you want to discuss?
 
@@ -331,6 +337,7 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
    - `entitlement_missing` — defect (gate should have caught it). Surface message, end.
    - `validation_failed` — return to Step 4 with `details` shown so the user revises.
    - `rate_limited` — surface message, don't auto-retry.
+   - **Any other `error_code`** (unknown connector contract) — surface `user_message`, do **not** offer retry/contact/scope-draft options (`retryable: false`). Treat as a connector contract regression, not an availability outage. Preserve `details.original_error_code` if present.
 
 ## Step 6 — Confirm and close
 
@@ -356,7 +363,7 @@ Don't promise specific faculty members or specific dates.
 
 - **Input** matches the JSON shape the platform AAE form posts. `origin` and `submitter` are server-populated, NOT in the skill's input.
 - **Output**: `status: "submitted"`, `case_id`, `tracking_url`, `expected_response_window`, `submitted_at`, `idempotency_key`.
-- **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`; transient/unavailable paths return `connector_unavailable` with retry/contact/scope-draft options.
+- **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`; transient/unavailable paths return `connector_unavailable` with retry/contact/scope-draft options. Unknown `error_code` values return `status: "error"` with `retryable: false` and `details.original_error_code` — not `connector_unavailable`.
 - **Idempotency**: `idempotency_key` prevents duplicate cases on retry.
 
 ## Chain pattern — invoked from another skill
@@ -388,7 +395,7 @@ A chained invocation must still lead with the one-line rationale from Step 3 ("F
 ## Scripts
 
 - `scripts/recommend_resolution.py` — Heuristic resolution recommender (Phone / Faculty Poll / Undecided) with one-line reasoning.
-- `scripts/check_poll_fit.py` — Detects mis-scoped Faculty Poll questions; emits a suggestion-only Phone nudge (DAAS-196).
+- `scripts/check_poll_fit.py` — Detects mis-scoped Faculty Poll questions; emits a suggestion-only Phone nudge (DAAS-196 / DAAS-208).
 - `scripts/draft_payload.py` — Extracts Driver / Question / Details from conversation transcript with cap and resolution-specific shape enforcement.
 - `scripts/infer_guidance.py` — Strategic / Technical inference. Empty array signals "must ask the user."
 - `scripts/parse_urgency.py` — Natural language urgency cues → `expedite_request` + ISO date.
