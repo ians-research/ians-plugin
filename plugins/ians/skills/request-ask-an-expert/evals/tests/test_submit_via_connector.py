@@ -108,6 +108,11 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertEqual(out["details"]["original_error_code"], "contract_version_mismatch")
         self.assertEqual(out["details"]["field"], "x")
 
+    def test_unknown_error_code_wraps_non_dict_details(self):
+        out = shape_error("contract_version_mismatch", "idem-9", "bad payload")
+        self.assertEqual(out["details"]["original_error_code"], "contract_version_mismatch")
+        self.assertEqual(out["details"]["raw_details"], "bad payload")
+
 
 class SubmitViaConnectorCliTest(unittest.TestCase):
     def _run_script(self, *extra_args: str) -> dict:

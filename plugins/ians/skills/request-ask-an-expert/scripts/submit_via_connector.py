@@ -187,12 +187,18 @@ def shape_unexpected_connector_error(
     error_code: str, idempotency_key: str, details: dict | None = None,
 ) -> dict:
     """Shape an unknown connector error — not an availability failure."""
+    if isinstance(details, dict):
+        details_dict = details
+    elif details is None:
+        details_dict = {}
+    else:
+        details_dict = {"raw_details": details}
     return {
         "status": "error",
         "error_code": error_code,
         "user_message": UNEXPECTED_CONNECTOR_ERROR_MESSAGE,
         "retryable": False,
-        "details": {**(details or {}), "original_error_code": error_code},
+        "details": {**details_dict, "original_error_code": error_code},
         "idempotency_key": idempotency_key,
     }
 
