@@ -133,7 +133,10 @@ PLACEHOLDERS = (
     "[needs your input]",
 )
 
-# A field still holding any of these markers was never filled in by the user.
+# Editorial markers that, *inside a bracketed cue*, mean the field was never
+# filled in. Only checked against the bracket interior so ordinary prose that
+# merely contains these words ("replace the placeholder logo", "the board needs
+# your input") is not flagged.
 _PLACEHOLDER_MARKERS = re.compile(
     r"needs your input|\bplaceholder\b",
     re.IGNORECASE,
@@ -143,15 +146,17 @@ _PLACEHOLDER_MARKERS = re.compile(
 def is_placeholder(value: object) -> bool:
     """Return True when *value* is an unfilled editor placeholder, not content.
 
-    Catches both the exact placeholder strings from SKILL.md and the general
-    bracketed ``[needs your input …]`` / ``[optional …]`` shape, so a lightly
-    edited placeholder ("[needs your input — the board ask]") is still caught.
+    Only a bracketed editorial cue counts — the exact SKILL.md placeholder
+    strings, or a ``[optional …]`` / ``[needs your input …]`` / ``[placeholder]``
+    shape (so a lightly edited "[needs your input — the board ask]" is still
+    caught). Ordinary prose that happens to contain "needs your input" or
+    "placeholder" is NOT treated as a placeholder.
 
     Args:
         value: The field value to inspect.
 
     Returns:
-        True if the trimmed value reads as an unfilled placeholder.
+        True if the trimmed value reads as an unfilled bracketed placeholder.
     """
     if not isinstance(value, str):
         return False
@@ -160,12 +165,11 @@ def is_placeholder(value: object) -> bool:
         return False
     if s in PLACEHOLDERS:
         return True
-    if _PLACEHOLDER_MARKERS.search(s):
-        return True
-    # Bare bracketed editorial marker, e.g. "[optional — …]" or "[ … ]".
     if s.startswith("[") and s.endswith("]"):
-        inner = s[1:-1].strip().lower()
-        if inner.startswith(("optional", "needs your input")):
+        inner = s[1:-1].strip()
+        if inner.lower().startswith(("optional", "needs your input")):
+            return True
+        if _PLACEHOLDER_MARKERS.search(inner):
             return True
     return False
 

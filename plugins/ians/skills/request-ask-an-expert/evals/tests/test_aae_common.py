@@ -169,6 +169,24 @@ class PlaceholderDetectionTest(unittest.TestCase):
         # A bracketed clause that isn't an editor placeholder should pass.
         self.assertFalse(is_placeholder("[see attached architecture diagram]"))
 
+    def test_unbracketed_prose_with_marker_words_not_flagged(self):
+        # Ordinary content that merely contains the marker words must pass —
+        # detection is restricted to bracketed editorial cues.
+        self.assertFalse(
+            is_placeholder("We need to replace the placeholder logo before launch.")
+        )
+        self.assertFalse(
+            is_placeholder("The board needs your input on the FY27 security budget.")
+        )
+        self.assertFalse(
+            is_placeholder("How should we handle placeholder text in our templates?")
+        )
+
+    def test_bracketed_marker_word_flagged(self):
+        # A bracketed marker (e.g. "[placeholder]") is still an unfilled cue.
+        self.assertTrue(is_placeholder("[placeholder]"))
+        self.assertTrue(is_placeholder("[the board ask \u2014 needs your input]"))
+
 
 if __name__ == "__main__":
     unittest.main()
