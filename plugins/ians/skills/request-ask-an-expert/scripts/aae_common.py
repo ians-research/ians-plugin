@@ -29,9 +29,7 @@ agree on the *shape* of a locked payload:
      into the locked payload, the field is unfilled and must NOT submit.
 
 These helpers are imported by ``validate_submission.py``,
-``build_submission_artifact.py``, and ``infer_guidance.py``. They are pure
-functions with no third-party dependencies so the scripts stay runnable in a
-bare ``python3`` with nothing installed.
+``submit_via_connector.py``, ``check_poll_fit.py``, and ``infer_guidance.py``.
 """
 
 from __future__ import annotations
