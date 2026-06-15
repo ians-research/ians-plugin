@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "build:skills": "node scripts/build-skill-zip.mjs",
-    "build:skill": "node scripts/build-skill-zip.mjs"
+    "build:skill": "node scripts/build-skill-zip.mjs",
+    "build:plugins": "node scripts/build-plugin-bundle.mjs",
+    "build:plugin": "node scripts/build-plugin-bundle.mjs"
   },
   "engines": {
     "node": ">=20"

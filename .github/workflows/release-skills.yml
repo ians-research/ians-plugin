@@ -1,4 +1,4 @@
-name: Release skill zips
+name: Release skill zips and plugin bundles
 
 on:
   push:
@@ -9,13 +9,14 @@ on:
     paths:
       - 'plugins/**'
       - 'scripts/build-skill-zip.mjs'
+      - 'scripts/build-plugin-bundle.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/release-skills.yml'
 
 jobs:
   build:
-    name: Build skill zips
+    name: Build skill zips and plugin bundles
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,21 +38,26 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      - name: Validate skills (check-only on PRs)
+      - name: Validate skills and plugins (check-only on PRs)
         if: github.event_name == 'pull_request'
-        run: node scripts/build-skill-zip.mjs --check
+        run: |
+          node scripts/build-skill-zip.mjs --check
+          node scripts/build-plugin-bundle.mjs --check
 
-      - name: Build skill zips
+      - name: Build skill zips and plugin bundles
         if: github.event_name != 'pull_request'
-        run: node scripts/build-skill-zip.mjs
+        run: |
+          node scripts/build-skill-zip.mjs
+          node scripts/build-plugin-bundle.mjs
 
-      - name: Upload zip artifacts
+      - name: Upload artifacts
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: skill-zips
+          name: skill-zips-and-plugin-bundles
           path: |
             dist/*.zip
+            dist/*.plugin
             dist/*.sha256
           if-no-files-found: error
 
@@ -61,6 +67,7 @@ jobs:
         with:
           files: |
             dist/*.zip
+            dist/*.plugin
             dist/*.sha256
           generate_release_notes: true
           fail_on_unmatched_files: true

@@ -100,9 +100,38 @@ metadata:
 
 The builder substitutes `description_short` into the zipped SKILL.md's `description` and drops the `description_short` helper. If `description_short` is missing **and** the long `description` is over 200 chars, the build fails with a clear message.
 
+## Packaging a whole plugin (Claude Desktop "Upload Plugin")
+
+To install an entire IANS plugin in **Claude Desktop** (Personal plugins → **+** → **Create Plugin** → **Upload Plugin**), upload a single bundle of the whole plugin rather than a per-skill zip. This repo ships a builder for that too.
+
+```bash
+npm install
+npm run build:plugins          # bundles every plugin under plugins/*
+npm run build:plugin -- ians   # bundle one plugin only (by directory name)
+node scripts/build-plugin-bundle.mjs --check   # validate without writing files
+```
+
+Each plugin produces three files in `dist/`:
+
+| File | Use |
+| --- | --- |
+| `<plugin>-<version>.zip` | **Upload this.** The format Claude Desktop's backend actually accepts. |
+| `<plugin>-<version>.plugin` | Byte-identical copy with the `.plugin` extension the file picker advertises. |
+| `<plugin>-<version>.zip.sha256` | Checksum of the zip. |
+
+The bundle's archive root is the plugin root: `.claude-plugin/plugin.json` sits at the top with `skills/` (and any `commands/`, `agents/`, `hooks/`) beside it — never nested inside `.claude-plugin/`. Each `SKILL.md` gets the same `description_short` frontmatter rewrite as the skill zips, and developer-only files (`evals/`, `__pycache__`, `*.pyc`, etc.) are excluded.
+
+### `.zip` vs `.plugin` — upload the `.zip`
+
+Claude Desktop's "Upload Plugin" file picker lists **both** `.zip` and `.plugin` as selectable types, but the upload backend currently ingests **only `.zip`** and silently rejects `.plugin` with a generic "Upload failed" (tracked in [anthropics/claude-code#40414](https://github.com/anthropics/claude-code/issues/40414)). A `.plugin` file is just the plugin zip with a different extension — same bytes, same internal structure. We emit the `.plugin` copy so it's ready the day the backend accepts it, but **end users should upload the `.zip`** today.
+
+> Claude Code users don't need this bundle at all — they install straight from the marketplace (`/plugin install ians@ians-tools`, see [Installation](#installation)).
+
+## Releasing skill zips and plugin bundles (CI)
+
 ### Cutting a release
 
-Tag a commit with a `v*` tag and push it. The `Release skill zips` workflow builds every skill and attaches the zips (plus their `.sha256`) to a GitHub Release.
+Tag a commit with a `v*` tag and push it. The release workflow builds every skill zip and every plugin bundle, then attaches the `.zip`, `.plugin`, and `.sha256` files to a GitHub Release.
 
 ```bash
 git tag v1.0.0
