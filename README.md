@@ -115,30 +115,30 @@ Each plugin produces three files in `dist/`:
 
 | File | Use |
 | --- | --- |
-| `<plugin>-<version>.zip` | **Upload this.** The format Claude Desktop's backend actually accepts. |
-| `<plugin>-<version>.plugin` | Byte-identical copy with the `.plugin` extension the file picker advertises. |
-| `<plugin>-<version>.zip.sha256` | Checksum of the zip. |
+| `<plugin>-<version>.zip` | Whole-plugin bundle. Upload via "Upload Plugin". |
+| `<plugin>-<version>.plugin` | Byte-identical copy with the `.plugin` extension; uploads the same way. |
+| `<plugin>-<version>.zip.sha256` | Checksum of the zip (also matches the `.plugin`, since they're identical). |
 
 The bundle's archive root is the plugin root: `.claude-plugin/plugin.json` sits at the top with `skills/` (and any `commands/`, `agents/`, `hooks/`) beside it — never nested inside `.claude-plugin/`. Each `SKILL.md` gets the same `description_short` frontmatter rewrite as the skill zips, and developer-only files (`evals/`, `__pycache__`, `*.pyc`, etc.) are excluded.
 
-### `.zip` vs `.plugin` — upload the `.zip`
+### `.zip` and `.plugin` are interchangeable
 
-Claude Desktop's "Upload Plugin" file picker lists **both** `.zip` and `.plugin` as selectable types, but the upload backend currently ingests **only `.zip`** and silently rejects `.plugin` with a generic "Upload failed" (tracked in [anthropics/claude-code#40414](https://github.com/anthropics/claude-code/issues/40414)). A `.plugin` file is just the plugin zip with a different extension — same bytes, same internal structure. We emit the `.plugin` copy so it's ready the day the backend accepts it, but **end users should upload the `.zip`** today.
+Claude Desktop's "Upload Plugin" file picker accepts **both** `.zip` and `.plugin`, and both upload successfully — they're byte-identical, only the extension differs. Hand users whichever they prefer.
 
 > Claude Code users don't need this bundle at all — they install straight from the marketplace (`/plugin install ians@ians-tools`, see [Installation](#installation)).
 
-## Releasing skill zips and plugin bundles (CI)
+## Releasing plugin bundles (CI)
 
 ### Cutting a release
 
-Tag a commit with a `v*` tag and push it. The release workflow builds every skill zip and every plugin bundle, then attaches the `.zip`, `.plugin`, and `.sha256` files to a GitHub Release.
+Tag a commit with a `v*` tag and push it. The release workflow builds every plugin bundle and attaches the `.zip`, `.plugin`, and `.sha256` files to a GitHub Release. Per-skill skill zips are **not** published to releases — if you need one for the Claude.ai/Desktop Skills-upload path, build it locally with `npm run build:skills`.
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Pull requests run the same builder in `--check` mode so frontmatter regressions surface in CI before merge.
+Pull requests run the plugin-bundle builder in `--check` mode — which also validates each skill's `SKILL.md` frontmatter — so regressions surface in CI before merge.
 
 ## Trust and safety
 

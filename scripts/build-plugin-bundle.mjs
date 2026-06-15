@@ -4,17 +4,14 @@
 // -> Upload Plugin" flow.
 //
 // Output (per plugin):
-//   dist/<plugin>-<version>.zip       <- upload this in Claude Desktop today
+//   dist/<plugin>-<version>.zip       <- whole-plugin bundle
 //   dist/<plugin>-<version>.plugin    <- byte-identical copy with the .plugin
 //                                        extension the file picker advertises
 //   dist/<plugin>-<version>.zip.sha256
 //
-// IMPORTANT — .zip vs .plugin: Claude Desktop's "Upload Plugin" file picker
-// lists BOTH .zip and .plugin as selectable types, but the upload backend
-// currently ingests only .zip and silently rejects .plugin
-// (anthropics/claude-code#40414). We still emit the .plugin copy so it is ready
-// the day the backend accepts the extension, but end users should upload the
-// .zip. Both files have identical bytes/contents — only the extension differs.
+// .zip vs .plugin: Claude Desktop's "Upload Plugin" file picker accepts BOTH,
+// and both upload successfully — they are byte-identical, only the extension
+// differs. Hand users whichever they prefer.
 //
 // Archive layout (zip root == plugin root, NO wrapper folder), per the plugin
 // spec: .claude-plugin/plugin.json lives at the archive root and skills/,
@@ -287,8 +284,8 @@ async function buildBundle({ name, pluginDir, version }) {
   await archive.finalize();
   await done;
 
-  // The .plugin copy is byte-identical to the .zip — only the extension the
-  // Desktop file picker shows differs.
+  // The .plugin copy is byte-identical to the .zip — only the extension differs.
+  // Both upload via Claude Desktop's "Upload Plugin" flow.
   copyFileSync(zipPath, pluginPath);
 
   const size = statSync(zipPath).size;
@@ -345,8 +342,8 @@ async function main() {
         pluginDir: p.pluginDir,
         version,
       });
-      console.log(`  wrote ${path.relative(repoRoot, zipPath)}  ${fmtBytes(size)}  (upload this)`);
-      console.log(`  wrote ${path.relative(repoRoot, pluginPath)}  (identical copy; .plugin not yet accepted on upload)`);
+      console.log(`  wrote ${path.relative(repoRoot, zipPath)}  ${fmtBytes(size)}`);
+      console.log(`  wrote ${path.relative(repoRoot, pluginPath)}  (identical copy, .plugin extension)`);
       console.log(`  sha256 ${sha}`);
     } catch (err) {
       hadError = true;
