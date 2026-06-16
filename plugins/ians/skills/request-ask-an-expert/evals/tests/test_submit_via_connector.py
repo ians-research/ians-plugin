@@ -9,6 +9,7 @@ Run from the skill root:
 """
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -25,13 +26,19 @@ from submit_via_connector import (  # noqa: E402
     build_connector_payload,
     shape_connector_unavailable,
     shape_error,
+    shape_success,
 )
+
+FIXTURES = SKILL_ROOT / "evals" / "fixtures"
 
 EM = "\u2014"
 
 
 class BuildConnectorPayloadTest(unittest.TestCase):
+    """Connector payload canonicalization (DAAS-167/168)."""
+
     def test_list_question_canonicalized_to_string(self):
+        """A list-shaped question serializes to the canonical numbered string."""
         payload = {
             "resolution": "Phone",
             "driver": "Board ask.",
@@ -50,6 +57,7 @@ class BuildConnectorPayloadTest(unittest.TestCase):
         self.assertIsInstance(out["question"], str)
 
     def test_guidance_normalized_to_canonical_array(self):
+        """Short-form guidance normalizes to the canonical Salesforce picklist labels."""
         payload = {
             "resolution": "Phone",
             "driver": "Board ask.",
@@ -61,6 +69,7 @@ class BuildConnectorPayloadTest(unittest.TestCase):
         self.assertEqual(out["guidance"], [GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL])
 
     def test_idempotency_key_passed_through(self):
+        """The idempotency key is carried onto the connector payload unchanged."""
         payload = {
             "resolution": "Phone",
             "driver": "Board ask.",
@@ -73,7 +82,10 @@ class BuildConnectorPayloadTest(unittest.TestCase):
 
 
 class GracefulFailureTest(unittest.TestCase):
+    """Graceful connector-unavailable and error mapping (DAAS-194)."""
+
     def test_shape_connector_unavailable_includes_options(self):
+        """connector_unavailable carries the three graceful-failure options."""
         out = shape_connector_unavailable("tool missing", "idem-4")
         self.assertEqual(out["status"], "connector_unavailable")
         self.assertEqual(out["options"], GRACEFUL_FAILURE_OPTIONS)
@@ -81,16 +93,19 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertIn("user_message", out)
 
     def test_server_error_maps_to_connector_unavailable(self):
+        """A server_error maps to the connector_unavailable graceful path."""
         out = shape_error("server_error", "idem-5")
         self.assertEqual(out["status"], "connector_unavailable")
         self.assertEqual(out["options"], GRACEFUL_FAILURE_OPTIONS)
 
     def test_validation_failed_stays_error(self):
+        """validation_failed stays a retryable error, not connector_unavailable."""
         out = shape_error("validation_failed", "idem-6", {"driver": "too long"})
         self.assertEqual(out["status"], "error")
         self.assertEqual(out["error_code"], "validation_failed")
 
     def test_unknown_error_code_stays_error_not_unavailable(self):
+        """An unknown error_code returns a non-retryable error, not connector_unavailable."""
         out = shape_error("contract_version_mismatch", "idem-7", {"field": "x"})
         self.assertEqual(out["status"], "error")
         self.assertEqual(out["error_code"], "contract_version_mismatch")
@@ -100,6 +115,7 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertNotIn("options", out)
 
     def test_unknown_error_code_overrides_caller_original_error_code(self):
+        """A caller-supplied original_error_code can't spoof the real error code."""
         out = shape_error(
             "contract_version_mismatch",
             "idem-8",
@@ -109,13 +125,66 @@ class GracefulFailureTest(unittest.TestCase):
         self.assertEqual(out["details"]["field"], "x")
 
     def test_unknown_error_code_wraps_non_dict_details(self):
+        """Non-dict details are wrapped under raw_details on an unknown error_code."""
         out = shape_error("contract_version_mismatch", "idem-9", "bad payload")
         self.assertEqual(out["details"]["original_error_code"], "contract_version_mismatch")
         self.assertEqual(out["details"]["raw_details"], "bad payload")
 
 
+class ShapeSuccessTest(unittest.TestCase):
+    """DAAS-306: skill aligns to the connector's integration_request_id and
+    drops the Salesforce case number / tracking URL it never returned."""
+
+    def _payload(self, resolution: str = "Phone") -> dict:
+        """Return a minimal valid AAE payload for the given resolution."""
+        return {
+            "resolution": resolution,
+            "driver": "Board ask.",
+            "question": ["Q1?", "Q2?", "Q3?"],
+            "guidance": ["Strategic"],
+            "expedite_request": False,
+        }
+
+    def test_surfaces_integration_request_id(self):
+        """The shaped success output carries the connector's integration_request_id."""
+        connector_response = {
+            "status": "submitted",
+            "integration_request_id": "INTREQ-00012345",
+            "connector_failures": [],
+            "response": {"salesforceCaseConnector": {"isSuccess": True}},
+        }
+        out = shape_success(connector_response, "idem-success", self._payload())
+        self.assertEqual(out["status"], "submitted")
+        self.assertEqual(out["integration_request_id"], "INTREQ-00012345")
+        self.assertEqual(out["idempotency_key"], "idem-success")
+
+    def test_drops_case_id_and_tracking_url(self):
+        """case_id / tracking_url are never surfaced, even if a stale connector echoes them."""
+        connector_response = {
+            "integration_request_id": "INTREQ-1",
+            "case_id": "00012345",
+            "tracking_url": "https://example.invalid/cases/00012345",
+        }
+        out = shape_success(connector_response, "idem-1", self._payload())
+        self.assertNotIn("case_id", out)
+        self.assertNotIn("tracking_url", out)
+
+    def test_response_window_computed_client_side_when_absent(self):
+        """expected_response_window is derived from the resolution when the connector omits it."""
+        out = shape_success({"integration_request_id": "x"}, "idem-2", self._payload("Faculty Poll"))
+        self.assertEqual(out["expected_response_window"]["resolution"], "Faculty Poll")
+        self.assertEqual(out["expected_response_window"]["business_days_min"], 4)
+        self.assertEqual(out["expected_response_window"]["business_days_max"], 6)
+
+    def test_null_integration_request_id_preserved_as_none(self):
+        """A missing integration_request_id stays None (the skill omits the reference clause)."""
+        out = shape_success({}, "idem-3", self._payload())
+        self.assertIsNone(out["integration_request_id"])
+
+
 class SubmitViaConnectorCliTest(unittest.TestCase):
-    def _run_script(self, *extra_args: str) -> dict:
+    def _run_script(self, *extra_args: str, env: dict | None = None) -> dict:
+        """Run submit_via_connector.py on a temp payload and return its parsed JSON stdout."""
         payload = {
             "resolution": "Phone",
             "driver": "Board ask.",
@@ -133,14 +202,30 @@ class SubmitViaConnectorCliTest(unittest.TestCase):
                 str(payload_path),
                 *extra_args,
             ]
-            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             return json.loads(proc.stdout)
 
     def test_mock_tool_not_registered_returns_connector_unavailable(self):
+        """An unregistered tool yields the graceful connector_unavailable response."""
         out = self._run_script("--mock-tool-not-registered")
         self.assertEqual(out["status"], "connector_unavailable")
         self.assertEqual(out["options"], GRACEFUL_FAILURE_OPTIONS)
+
+    def test_mock_success_surfaces_integration_request_id(self):
+        """End-to-end: a mocked success response shapes to the integration_request_id contract."""
+        env = {**os.environ, "IANS_REQUEST_AAE_AVAILABLE": "1"}
+        out = self._run_script(
+            "--mock-response",
+            str(FIXTURES / "mock-connector-success.json"),
+            env=env,
+        )
+        self.assertEqual(out["status"], "submitted")
+        self.assertEqual(out["integration_request_id"], "INTREQ-00012345")
+        self.assertNotIn("case_id", out)
+        self.assertNotIn("tracking_url", out)
+        self.assertIn("expected_response_window", out)
+        self.assertTrue(out["idempotency_key"])
 
 
 if __name__ == "__main__":

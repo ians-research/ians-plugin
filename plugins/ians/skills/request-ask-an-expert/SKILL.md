@@ -2,7 +2,7 @@
 name: request-ask-an-expert
 description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS Research. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write through `ians_request_aae`. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
 metadata:
-  version: "1.0.3"
+  version: "1.0.4"
   description_short: "Submit a faculty-led Ask-an-Expert request to IANS Research. Use when the user wants to schedule an AAE call, request faculty time, or escalate a question to IANS expert review."
 ---
 
@@ -306,7 +306,7 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
 
 **Hard rule — connector submission is the only write path; never redirect to the web form.** When the IANS MCP is connected (Step 0 passed) and the user is entitled (Step 2 passed), this skill submits **through the connector**. Do NOT tell the user to go fill out the Ask-an-Expert form on iansresearch.com, and do NOT hand them a website link in place of submitting. The Beta connector counts as available: if `ians_request_aae` is registered, use it.
 
-**Hard rule — script execution is non-negotiable.** You MUST execute `submit_via_connector.py` via the Bash tool (or call `ians_request_aae` directly when the runtime supports it). Do NOT fabricate a case ID, tracking URL, or success message. If the connector call fails, surface the error inline — never continue silently or pretend the request was sent.
+**Hard rule — script execution is non-negotiable.** You MUST execute `submit_via_connector.py` via the Bash tool (or call `ians_request_aae` directly when the runtime supports it). Do NOT fabricate a request reference id or success message. If the connector call fails, surface the error inline — never continue silently or pretend the request was sent.
 
 1. Submit through the connector:
 
@@ -317,9 +317,11 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
 
    When `ians_request_aae` is registered in the MCP session, call the tool directly with the canonical connector payload — the **Input** shape documented in the Connector contract below, which is the same shape `submit_via_connector.py` builds before invoking the tool.
 
-2. **Status `submitted`** — connector accepted the request. Surface verbatim:
+2. **Status `submitted`** — connector accepted the request. Surface verbatim (the connector returns `integration_request_id` as the request reference — there is no Salesforce case number or tracking URL in the response, so do not render a tracking link):
 
-   > Your Ask-an-Expert request has been submitted. **Case:** {case_id}. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is typically **{faculty_window}** ({4-6 business days for Faculty Poll | 8-12 business days for Phone/Undecided}). Track status: {tracking_url}
+   > Your Ask-an-Expert request has been submitted{request_reference}. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is typically **{faculty_window}** ({4-6 business days for Faculty Poll | 8-12 business days for Phone/Undecided}).
+
+   When `integration_request_id` is present, set `{request_reference}` to ` — your request reference is **{integration_request_id}**`. When it is null, set `{request_reference}` to an empty string (omit the clause entirely — never show "None" or a fabricated id).
 
 3. **Status `connector_unavailable`** — the connector could not accept the submission (`tool_not_registered`, `server_error`, or equivalent). Surface the error **inline** and offer these three options verbatim:
 
@@ -362,7 +364,7 @@ Don't promise specific faculty members or specific dates.
 `ians_request_aae` submits directly to IANS when the connector is available. There is no JSON-artifact fallback — when the connector is unavailable, the skill surfaces graceful failure options (retry, contact Client Services, save as scope draft).
 
 - **Input** matches the JSON shape the platform AAE form posts. `origin` and `submitter` are server-populated, NOT in the skill's input.
-- **Output**: `status: "submitted"`, `case_id`, `tracking_url`, `expected_response_window`, `submitted_at`, `idempotency_key`.
+- **Output**: `status: "submitted"`, `integration_request_id` (request reference parsed from the Salesforce status message; may be null), `expected_response_window` (computed client-side from the resolution), `submitted_at`, `idempotency_key`. The connector does **not** return a Salesforce case number or a portal tracking URL, so the skill surfaces `integration_request_id` and renders no tracking link.
 - **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`; transient/unavailable paths return `connector_unavailable` with retry/contact/scope-draft options. Unknown `error_code` values return `status: "error"` with `retryable: false` and `details.original_error_code` — not `connector_unavailable`.
 - **Idempotency**: `idempotency_key` prevents duplicate cases on retry.
 

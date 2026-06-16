@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "ians-tools",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "IANS Research plugins for Claude Code and Cowork. Skills that integrate with the IANS platform via our MCP server.",
   "owner": {
     "name": "IANS Research",
@@ -15,7 +15,7 @@
       "name": "ians",
       "displayName": "IANS Research",
       "description": "IANS Research skills for Claude Code and Cowork. Bundles Ask-an-Expert and future Ask IANS skills behind the IANS Research MCP connector.",
-      "source": "ians",
+      "source": "./plugins/ians",
       "category": "research",
       "keywords": ["ians", "research", "advisory", "ask-an-expert"]
     }
