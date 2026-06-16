@@ -240,6 +240,7 @@ def shape_error(
 
 
 def main() -> None:
+    """CLI entry point: read the payload, invoke (or mock) the connector, print shaped JSON."""
     parser = argparse.ArgumentParser(
         description="Submit AAE request via ians_request_aae connector tool",
     )
