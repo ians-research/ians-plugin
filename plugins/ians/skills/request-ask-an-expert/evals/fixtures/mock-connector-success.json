@@ -1,11 +1,8 @@
 {
-  "case_id": "00012345",
-  "tracking_url": "https://www.iansresearch.com/portal/cases/00012345",
-  "expected_response_window": {
-    "resolution": "Phone",
-    "business_days_min": 8,
-    "business_days_max": 12
-  },
-  "submitted_at": "2026-05-05T15:00:00Z",
-  "status": "queued"
+  "status": "submitted",
+  "integration_request_id": "INTREQ-00012345",
+  "connector_failures": [],
+  "response": {
+    "salesforceCaseConnector": { "isSuccess": true }
+  }
 }

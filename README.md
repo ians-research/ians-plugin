@@ -69,7 +69,7 @@ plugins/<plugin-name>/
     └── SKILL.md
 ```
 
-Then add a corresponding entry to [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) using `"source": "<plugin-name>"` (shorthand enabled by `metadata.pluginRoot`). See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the marketplace-entry field reference.
+Then add a corresponding entry to [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) with a repo-relative `"source": "./plugins/<plugin-name>"`. A relative `source` **must start with `./`** — the bare-name shorthand (`"source": "<plugin-name>"`) fails `claude plugin validate`. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the marketplace-entry field reference.
 
 ## Releasing skill zips (for Claude.ai / Claude Desktop)
 

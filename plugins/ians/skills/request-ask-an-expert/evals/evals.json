@@ -95,19 +95,19 @@
     },
     {
       "id": 4,
-      "name": "submit-mode-option-a-mocked",
-      "prompt": "[Programmatic test for the future Option A path.] Given a fully-populated AAE payload and a mocked successful connector response (case_id 00012345, tracking_url, expected_response_window), verify that submit_via_connector.py returns status:submitted with the case ID surfaced.",
-      "expected_output": "submit_via_connector.py invoked with --mock-response pointing at a success-shaped JSON. Script returns status:submitted, case_id:'00012345', tracking_url, expected_response_window matching the resolution. idempotency_key is generated. Skill surfaces case ID and tracking URL to the user with the appropriate timeline language.",
+      "name": "submit-mode-connector-success-mocked",
+      "prompt": "[Programmatic test for the connector success path.] Given a fully-populated AAE payload and a mocked successful connector response (integration_request_id INTREQ-00012345), verify that submit_via_connector.py returns status:submitted with the integration request id surfaced.",
+      "expected_output": "submit_via_connector.py invoked with --mock-response pointing at a success-shaped JSON. Script returns status:submitted, integration_request_id:'INTREQ-00012345', and expected_response_window computed client-side from the resolution. idempotency_key is generated. No case_id or tracking_url is produced — the connector does not return them. Skill surfaces the integration request id to the user with the appropriate timeline language and renders no tracking link.",
       "files": [
         "fixtures/sample-payload-full.json",
         "fixtures/mock-connector-success.json"
       ],
-      "notes": "Tests the connector path the skill takes once ians_request_aae ships. Uses IANS_REQUEST_AAE_AVAILABLE=1 + --mock-response.",
+      "notes": "DAAS-306. Tests the reconciled connector response contract: tool and skill aligned on integration_request_id, tracking URL dropped. Uses IANS_REQUEST_AAE_AVAILABLE=1 + --mock-response.",
       "structural_checklist": [
         "submit_via_connector exits 0",
         "Response status is 'submitted'",
-        "case_id present and matches mock",
-        "tracking_url present",
+        "integration_request_id present and matches mock",
+        "No case_id or tracking_url in output",
         "expected_response_window populated",
         "idempotency_key generated"
       ]

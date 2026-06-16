@@ -15,7 +15,7 @@
       "name": "ians",
       "displayName": "IANS Research",
       "description": "IANS Research skills for Claude Code and Cowork. Bundles Ask-an-Expert and future Ask IANS skills behind the IANS Research MCP connector.",
-      "source": "ians",
+      "source": "./plugins/ians",
       "category": "research",
       "keywords": ["ians", "research", "advisory", "ask-an-expert"]
     }

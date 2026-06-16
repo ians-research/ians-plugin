@@ -23,8 +23,7 @@ Usage:
 Output JSON to stdout (success):
 {
   "status": "submitted",
-  "case_id": "...",
-  "tracking_url": "...",
+  "integration_request_id": "...",
   "expected_response_window": {
     "resolution": "Phone | Faculty Poll",
     "business_days_min": 8,
@@ -33,6 +32,11 @@ Output JSON to stdout (success):
   "submitted_at": "ISO8601",
   "idempotency_key": "<UUID>"
 }
+
+The connector (`ians_request_aae`) returns `integration_request_id` as the
+request reference — there is no Salesforce case number or portal tracking URL
+in its response, so the skill surfaces `integration_request_id` and does not
+render a tracking link.
 
 Output JSON to stdout (connector unavailable — graceful failure):
 {
@@ -147,13 +151,20 @@ def build_connector_payload(payload: dict, idempotency_key: str) -> dict:
 def shape_success(
     connector_response: dict, idempotency_key: str, payload: dict,
 ) -> dict:
-    """Shape the connector's success response for the skill."""
+    """Shape the connector's success response for the skill.
+
+    The `ians_request_aae` connector returns `integration_request_id` (parsed
+    from the Salesforce status message) as the request reference. It does not
+    return a Salesforce case number or a portal tracking URL, so we surface the
+    integration request id and omit any tracking link. The faculty turnaround
+    window is computed client-side from the resolution — the connector does not
+    return one.
+    """
     resolution = payload.get("resolution", "Phone")
     fallback_window = RESPONSE_WINDOWS.get(resolution, RESPONSE_WINDOWS["Phone"])
     return {
         "status": "submitted",
-        "case_id": connector_response.get("case_id"),
-        "tracking_url": connector_response.get("tracking_url"),
+        "integration_request_id": connector_response.get("integration_request_id"),
         "expected_response_window": connector_response.get(
             "expected_response_window",
             {"resolution": resolution, **fallback_window},
