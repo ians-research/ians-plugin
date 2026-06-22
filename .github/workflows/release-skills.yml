@@ -1,0 +1,70 @@
+name: Release plugin bundles
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - 'scripts/build-plugin-bundle.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/release-skills.yml'
+
+jobs:
+  build:
+    name: Build plugin bundles
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # The plugin-bundle builder validates each skill's SKILL.md frontmatter
+      # internally, so this also covers skill regressions.
+      - name: Validate plugin bundles (check-only on PRs)
+        if: github.event_name == 'pull_request'
+        run: node scripts/build-plugin-bundle.mjs --check
+
+      - name: Build plugin bundles
+        if: github.event_name != 'pull_request'
+        run: node scripts/build-plugin-bundle.mjs
+
+      - name: Upload artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-bundles
+          path: |
+            dist/*.zip
+            dist/*.plugin
+            dist/*.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/*.zip
+            dist/*.plugin
+            dist/*.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true

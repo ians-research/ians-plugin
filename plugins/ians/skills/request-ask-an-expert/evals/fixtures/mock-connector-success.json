@@ -1,0 +1,8 @@
+{
+  "status": "submitted",
+  "integration_request_id": "INTREQ-00012345",
+  "connector_failures": [],
+  "response": {
+    "salesforceCaseConnector": { "isSuccess": true }
+  }
+}

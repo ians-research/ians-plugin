@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "ians",
+  "displayName": "IANS",
+  "version": "1.0.0",
+  "description": "IANS skills for Claude Code and Cowork. Bundles Ask-an-Expert and future Ask IANS skills behind the IANS MCP connector.",
+  "author": {
+    "name": "IANS",
+    "email": "support@iansresearch.com"
+  },
+  "homepage": "https://github.com/ians-research/claude-skills/tree/main/plugins/ians",
+  "repository": "https://github.com/ians-research/claude-skills",
+  "license": "MIT",
+  "keywords": ["ians", "research", "advisory", "ask-an-expert"]
+}
