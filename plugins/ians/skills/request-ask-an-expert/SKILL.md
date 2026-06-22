@@ -1,9 +1,9 @@
 ---
 name: request-ask-an-expert
-description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS Research. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write through `ians_request_aae`. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
+description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write through `ians_request_aae`. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
 metadata:
   version: "1.0.4"
-  description_short: "Submit a faculty-led Ask-an-Expert request to IANS Research. Use when the user wants to schedule an AAE call, request faculty time, or escalate a question to IANS expert review."
+  description_short: "Submit a faculty-led Ask-an-Expert request to IANS. Use when the user wants to schedule an AAE call, request faculty time, or escalate a question to IANS expert review."
 ---
 
 # Request Ask-an-Expert
@@ -20,12 +20,12 @@ If the call fails, refuse. Show this message verbatim:
 
 > **IANS MCP connector is not available.**
 >
-> This skill works with Ask-an-Expert requests on behalf of IANS Research. It can't run without a live connection to the IANS Research MCP server.
+> This skill works with Ask-an-Expert requests on behalf of IANS. It can't run without a live connection to the IANS MCP server.
 >
 > To connect:
 >
 > 1. Confirm your IANS platform credentials are active.
-> 2. Connect the IANS Research MCP server (contact your admin or visit your IANS onboarding guide).
+> 2. Connect the IANS MCP server (contact your admin or visit your IANS onboarding guide).
 > 3. Try again once the connection is established.
 
 ## Step 0.5 — Active-incident guard (non-negotiable)

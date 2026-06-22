@@ -1,8 +1,8 @@
 # IANS Claude Skills
 
-Public marketplace of [Claude Code](https://code.claude.com) and [Claude Cowork](https://claude.ai) plugins published by [IANS Research](https://www.iansresearch.com).
+Public marketplace of [Claude Code](https://code.claude.com) and [Claude Cowork](https://claude.ai) plugins published by [IANS](https://www.iansresearch.com).
 
-This repo publishes **Claude plugins** (skills + supporting assets). Plugins that talk to IANS require the user to connect the **IANS Research MCP** server (see each plugin README). Some plugins ship a **full skill** in-repo (workflow, prompts, scripts); others may remain thin routers over a hosted workflow.
+This repo publishes **Claude plugins** (skills + supporting assets). Plugins that talk to IANS require the user to connect the **IANS MCP** server (see each plugin README). Some plugins ship a **full skill** in-repo (workflow, prompts, scripts); others may remain thin routers over a hosted workflow.
 
 ## Available plugin and skills
 
@@ -23,7 +23,7 @@ Installing the `ians` plugin enables every IANS skill it contains.
 
 ## How these plugins are structured
 
-Each plugin lives under `plugins/<name>/` with a `.claude-plugin/plugin.json` manifest and one or more `skills/<skill-name>/SKILL.md` directories. The `ians` plugin is the IANS Research bundle: every IANS-branded skill lives under [`plugins/ians/skills/`](./plugins/ians/skills/), so they share one plugin root and can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md`. Each skill ships its supporting assets (e.g. `scripts/` for Python helpers, `evals/` for repeatable checks) alongside its `SKILL.md`.
+Each plugin lives under `plugins/<name>/` with a `.claude-plugin/plugin.json` manifest and one or more `skills/<skill-name>/SKILL.md` directories. The `ians` plugin is the IANS bundle: every IANS-branded skill lives under [`plugins/ians/skills/`](./plugins/ians/skills/), so they share one plugin root and can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md`. Each skill ships its supporting assets (e.g. `scripts/` for Python helpers, `evals/` for repeatable checks) alongside its `SKILL.md`.
 
 This layout follows Anthropic's [plugin marketplaces](https://docs.claude.com/en/docs/claude-code/plugin-marketplaces) and [plugins reference](https://docs.claude.com/en/docs/claude-code/plugins-reference) spec.
 
@@ -34,7 +34,7 @@ claude-skills/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/
-    └── ians/                       # IANS Research bundle (one plugin, many skills)
+    └── ians/                       # IANS bundle (one plugin, many skills)
         ├── .claude-plugin/
         │   └── plugin.json         # plugin manifest
         ├── README.md

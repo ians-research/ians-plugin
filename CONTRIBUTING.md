@@ -1,6 +1,6 @@
 # Contributing
 
-This repo publishes IANS Research plugins for Claude Code and Claude Cowork. This guide covers the `SKILL.md` frontmatter contract, the `marketplace.json` entry fields, the validation steps every change must pass, and the public-release hygiene checklist.
+This repo publishes IANS plugins for Claude Code and Claude Cowork. This guide covers the `SKILL.md` frontmatter contract, the `marketplace.json` entry fields, the validation steps every change must pass, and the public-release hygiene checklist.
 
 ## Repository layout
 
@@ -9,7 +9,7 @@ claude-skills/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/
-    └── ians/                       # IANS Research bundle (one plugin, many skills)
+    └── ians/                       # IANS bundle (one plugin, many skills)
         ├── .claude-plugin/
         │   └── plugin.json         # plugin manifest
         ├── README.md

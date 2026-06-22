@@ -222,7 +222,7 @@ def shape_error(
         reason = (
             "ians_request_aae is not registered with the MCP client."
             if error_code == "tool_not_registered"
-            else "IANS Research had a temporary problem accepting your request."
+            else "IANS had a temporary problem accepting your request."
         )
         return shape_connector_unavailable(reason, idempotency_key)
 

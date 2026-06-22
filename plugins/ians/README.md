@@ -1,20 +1,20 @@
-# IANS Research
+# IANS
 
-A bundle of [Claude Code](https://code.claude.com) and [Claude Cowork](https://claude.ai) skills published by [IANS Research](https://www.iansresearch.com). All skills in this plugin gate on the IANS Research MCP connector and use the user's active IANS entitlements to decide what they can do.
+A bundle of [Claude Code](https://code.claude.com) and [Claude Cowork](https://claude.ai) skills published by [IANS](https://www.iansresearch.com). All skills in this plugin gate on the IANS MCP connector and use the user's active IANS entitlements to decide what they can do.
 
 ## Skills in this plugin
 
 | Skill | Description |
 | --- | --- |
-| [`request-ask-an-expert`](./skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS Research. Conversational form-filler that mirrors the platform AAE form, validates required fields, and submits through the IANS MCP connector (with graceful failure handling when the connector is unavailable). |
+| [`request-ask-an-expert`](./skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS. Conversational form-filler that mirrors the platform AAE form, validates required fields, and submits through the IANS MCP connector (with graceful failure handling when the connector is unavailable). |
 
 More IANS skills will be added under [`skills/`](./skills/) over time. Skills inside this plugin can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md` references — they share one plugin root.
 
 ## Requirements
 
 - Claude Code or Claude Cowork
-- Active IANS Research account with MCP access
-- **IANS Research MCP** connected and authenticated (for `ians_whoami` and any submission tooling each skill needs)
+- Active IANS account with MCP access
+- **IANS MCP** connected and authenticated (for `ians_whoami` and any submission tooling each skill needs)
 - **Python 3** on the path when a skill runs scripts via the Bash tool
 
 ## Installation
@@ -28,7 +28,7 @@ Installing the plugin enables every skill it contains. Skills self-invoke based 
 
 ## Example prompts
 
-These prompts exercise the `request-ask-an-expert` skill end-to-end. With the IANS Research MCP connected and AAE entitlement active, the skill recommends a delivery method, drafts a form-shaped review you can edit in chat, validates the required fields, and submits through the connector. (Without the connector it stops and explains how to connect; without entitlement it ends gracefully.)
+These prompts exercise the `request-ask-an-expert` skill end-to-end. With the IANS MCP connected and AAE entitlement active, the skill recommends a delivery method, drafts a form-shaped review you can edit in chat, validates the required fields, and submits through the connector. (Without the connector it stops and explains how to connect; without entitlement it ends gracefully.)
 
 1. **Ask-an-Expert call with a deadline**
 
