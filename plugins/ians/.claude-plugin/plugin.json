@@ -8,8 +8,8 @@
     "name": "IANS",
     "email": "support@iansresearch.com"
   },
-  "homepage": "https://github.com/ians-research/claude-skills/tree/main/plugins/ians",
-  "repository": "https://github.com/ians-research/claude-skills",
+  "homepage": "https://github.com/ians-research/ians-plugin/tree/main/plugins/ians",
+  "repository": "https://github.com/ians-research/ians-plugin",
   "license": "MIT",
   "keywords": ["ians", "research", "advisory", "ask-an-expert"]
 }

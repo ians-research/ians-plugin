@@ -5,7 +5,7 @@ This repo publishes IANS plugins for Claude Code and Claude Cowork. This guide c
 ## Repository layout
 
 ```txt
-claude-skills/
+ians-plugin/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/

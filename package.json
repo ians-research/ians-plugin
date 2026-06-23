@@ -1,5 +1,5 @@
 {
-  "name": "ians-claude-skills",
+  "name": "ians-plugin",
   "version": "0.0.0",
   "private": true,
   "description": "Build tooling for the IANS Claude skills marketplace. Not a published package.",

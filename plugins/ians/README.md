@@ -20,7 +20,7 @@ More IANS skills will be added under [`skills/`](./skills/) over time. Skills in
 ## Installation
 
 ```txt
-/plugin marketplace add ians-research/claude-skills
+/plugin marketplace add ians-research/ians-plugin
 /plugin install ians@ians-tools
 ```
 

@@ -15,7 +15,7 @@ This repo publishes **Claude plugins** (skills + supporting assets). Plugins tha
 From inside Claude Code:
 
 ```txt
-/plugin marketplace add ians-research/claude-skills
+/plugin marketplace add ians-research/ians-plugin
 /plugin install ians@ians-tools
 ```
 
@@ -30,7 +30,7 @@ This layout follows Anthropic's [plugin marketplaces](https://docs.claude.com/en
 ## Repository layout
 
 ```txt
-claude-skills/
+ians-plugin/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/
