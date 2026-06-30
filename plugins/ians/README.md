@@ -14,7 +14,7 @@ More IANS skills will be added under [`skills/`](./skills/) over time. Skills in
 
 - Claude Code or Claude Cowork
 - Active IANS account with MCP access
-- **IANS MCP** connected and authenticated (for `ians_whoami` and any submission tooling each skill needs)
+- **IANS MCP** — bundled with this plugin (declared in [`.mcp.json`](./.mcp.json)) and registered automatically when the plugin is installed in Claude Code. On first use you complete a one-time IANS sign-in (OAuth) so `ians_whoami` and the submission tooling can authenticate.
 - **Python 3** on the path when a skill runs scripts via the Bash tool
 
 ## Installation
@@ -24,7 +24,7 @@ More IANS skills will be added under [`skills/`](./skills/) over time. Skills in
 /plugin install ians@ians-tools
 ```
 
-Installing the plugin enables every skill it contains. Skills self-invoke based on conversation context, or you can call them explicitly (the exact slash command depends on Claude Code's plugin naming).
+Installing the plugin enables every skill it contains and registers the bundled IANS MCP connector automatically (no separate `/mcp` setup). The first time a skill calls the connector, Claude Code prompts you to sign in to IANS once (OAuth); after that, skills self-invoke based on conversation context, or you can call them explicitly (the exact slash command depends on Claude Code's plugin naming).
 
 ## Example prompts
 

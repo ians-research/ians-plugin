@@ -1,0 +1,6 @@
+{
+  "ians": {
+    "type": "http",
+    "url": "https://mcp.iansresearch.com/mcp"
+  }
+}
