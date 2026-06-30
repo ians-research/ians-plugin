@@ -21,7 +21,10 @@ The required-field matrix mirrors the platform AAE form:
                      values {"Strategic / Executive", "Technical / Tactical"}.
                      Short-form aliases ("Strategic") are accepted with a
                      normalization warning. Forbidden for Faculty Poll.
-  email_address      required, must look like an email
+  email_address      OPTIONAL reply-to override only. The connector populates the
+                     email server-side from the authenticated session, so this is
+                     never required client-side and is never sourced from
+                     ians_whoami (DAAS-362). When present, must look like an email.
   expedite_request   required boolean (defaults to False if absent)
   deadline           required iff expedite_request=True; must be ISO date ≥ today
   availability       optional; forbidden for Faculty Poll
@@ -29,7 +32,6 @@ The required-field matrix mirrors the platform AAE form:
 
 Usage:
     python validate_submission.py --payload <path-to-canonical-payload-json>
-        [--whoami <path-to-ians-whoami-output-json>]
         [--today YYYY-MM-DD]    # for tests; defaults to system today
 
 Output JSON to stdout:
@@ -318,21 +320,17 @@ def _check_guidance(
     return errors, warnings
 
 
-def _check_email(payload: dict, whoami: dict) -> list[Issue]:
+def _check_email(payload: dict) -> list[Issue]:
+    """Validate an optional reply-to email override.
+
+    Email is NOT a client-side required field: the connector populates it
+    server-side from the authenticated session, and `ians_whoami` does not
+    expose the user's email (DAAS-362). Only validate the format when the
+    payload carries an explicit override; never require it, never read whoami.
+    """
     errors: list[Issue] = []
-    email = (
-        (payload.get("email") or payload.get("email_address") or "").strip()
-        or (whoami.get("user") or {}).get("email")
-        or whoami.get("email")
-        or ""
-    )
-    if not email:
-        errors.append({
-            "field": "email_address",
-            "code": "missing",
-            "message": "Email is required; pulled from ians_whoami. Connector may not be authenticated.",
-        })
-    elif not EMAIL_RE.match(email):
+    email = (payload.get("email") or payload.get("email_address") or "").strip()
+    if email and not EMAIL_RE.match(email):
         errors.append({
             "field": "email_address",
             "code": "invalid",
@@ -439,12 +437,11 @@ def _check_scheduling(payload: dict, is_fp: bool) -> list[Issue]:  # noqa: FBT00
     ]
 
 
-def validate(payload: dict, whoami: dict, today: date) -> dict:
+def validate(payload: dict, today: date) -> dict:
     """Validate the canonical AAE payload against the form-required rules.
 
     Args:
         payload: The canonical AAE payload built by the skill.
-        whoami: The ians_whoami() result (used for email fallback).
         today: Anchor date for past-deadline checks.
 
     Returns:
@@ -468,7 +465,7 @@ def validate(payload: dict, whoami: dict, today: date) -> dict:
     guidance_errors, guidance_warnings = _check_guidance(payload, is_fp, resolution)
     errors.extend(guidance_errors)
     warnings.extend(guidance_warnings)
-    errors.extend(_check_email(payload, whoami))
+    errors.extend(_check_email(payload))
 
     deadline_errors, deadline_warnings = _check_deadline(payload, today, is_fp)
     errors.extend(deadline_errors)
@@ -488,7 +485,6 @@ def main() -> None:
         description="Validate the canonical AAE payload against form-required rules",
     )
     parser.add_argument("--payload", required=True, help="Path to canonical AAE payload JSON")
-    parser.add_argument("--whoami", help="Optional path to ians_whoami output JSON")
     parser.add_argument("--today", help="Override today's date (YYYY-MM-DD) for tests")
     args = parser.parse_args()
 
@@ -504,16 +500,6 @@ def main() -> None:
         print(json.dumps({"error": f"Could not parse payload: {e}"}), file=sys.stderr)
         sys.exit(2)
 
-    whoami = {}
-    if args.whoami:
-        whoami_path = Path(args.whoami)
-        if whoami_path.exists():
-            try:
-                with whoami_path.open("r", encoding="utf-8") as f:
-                    whoami = json.load(f)
-            except (json.JSONDecodeError, OSError):
-                pass
-
     today = datetime.now(tz=timezone.utc).date()
     if args.today:
         try:
@@ -522,7 +508,7 @@ def main() -> None:
             print(json.dumps({"error": f"--today must be YYYY-MM-DD; got {args.today!r}"}), file=sys.stderr)
             sys.exit(2)
 
-    result = validate(payload, whoami, today)
+    result = validate(payload, today)
     print(json.dumps(result, indent=2))
     sys.exit(0 if result["valid"] else 1)
 

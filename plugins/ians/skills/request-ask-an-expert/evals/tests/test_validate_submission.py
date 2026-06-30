@@ -22,7 +22,6 @@ from aae_common import GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL  # noqa: E402
 from validate_submission import validate  # noqa: E402
 
 TODAY = date(2026, 6, 1)
-WHOAMI = {"user": {"email": "dparizher@iansresearch.com"}}
 EM = "\u2014"
 
 
@@ -48,13 +47,13 @@ def codes(result, field=None):
 
 class ValidPayloadTest(unittest.TestCase):
     def test_canonical_phone_payload_is_valid(self):
-        result = validate(base_phone_payload(), WHOAMI, TODAY)
+        result = validate(base_phone_payload(), TODAY)
         self.assertTrue(result["valid"], result["errors"])
         self.assertEqual(result["errors"], [])
 
     def test_list_shape_question_counts_correctly(self):
         # 3 list items satisfy the Phone 3-5 range (DAAS-167).
-        result = validate(base_phone_payload(), WHOAMI, TODAY)
+        result = validate(base_phone_payload(), TODAY)
         self.assertNotIn("too_few", codes(result, "question"))
         self.assertNotIn("too_many", codes(result, "question"))
 
@@ -64,20 +63,20 @@ class ValidPayloadTest(unittest.TestCase):
             f"2. Energy {EM} How do we prioritize?\n"
             f"3. Reporting {EM} How do we report it?"
         )
-        result = validate(base_phone_payload(question=raw), WHOAMI, TODAY)
+        result = validate(base_phone_payload(question=raw), TODAY)
         self.assertTrue(result["valid"], result["errors"])
 
 
 class QuestionCountTest(unittest.TestCase):
     def test_too_few_for_phone(self):
         result = validate(
-            base_phone_payload(question=["Only one?", "Two?"]), WHOAMI, TODAY
+            base_phone_payload(question=["Only one?", "Two?"]), TODAY
         )
         self.assertIn("too_few", codes(result, "question"))
 
     def test_too_many_for_phone(self):
         result = validate(
-            base_phone_payload(question=[f"Q{i}?" for i in range(6)]), WHOAMI, TODAY
+            base_phone_payload(question=[f"Q{i}?" for i in range(6)]), TODAY
         )
         self.assertIn("too_many", codes(result, "question"))
 
@@ -88,28 +87,28 @@ class QuestionCountTest(unittest.TestCase):
             "question": ["How common is this approach among peers?"],
             "expedite_request": False,
         }
-        result = validate(payload, WHOAMI, TODAY)
+        result = validate(payload, TODAY)
         self.assertTrue(result["valid"], result["errors"])
 
 
 class GuidanceTest(unittest.TestCase):
     def test_short_form_accepted_with_normalization_warning(self):
-        result = validate(base_phone_payload(guidance=["Strategic"]), WHOAMI, TODAY)
+        result = validate(base_phone_payload(guidance=["Strategic"]), TODAY)
         self.assertTrue(result["valid"], result["errors"])
         warn_codes = [w["code"] for w in result["warnings"] if w["field"] == "guidance"]
         self.assertIn("normalized", warn_codes)
 
     def test_canonical_form_has_no_normalization_warning(self):
-        result = validate(base_phone_payload(), WHOAMI, TODAY)
+        result = validate(base_phone_payload(), TODAY)
         warn_codes = [w["code"] for w in result["warnings"] if w["field"] == "guidance"]
         self.assertNotIn("normalized", warn_codes)
 
     def test_unknown_guidance_value_rejected(self):
-        result = validate(base_phone_payload(guidance=["Bogus"]), WHOAMI, TODAY)
+        result = validate(base_phone_payload(guidance=["Bogus"]), TODAY)
         self.assertIn("invalid_value", codes(result, "guidance"))
 
     def test_missing_guidance_for_phone(self):
-        result = validate(base_phone_payload(guidance=[]), WHOAMI, TODAY)
+        result = validate(base_phone_payload(guidance=[]), TODAY)
         self.assertIn("missing", codes(result, "guidance"))
 
     def test_guidance_forbidden_for_faculty_poll(self):
@@ -120,7 +119,7 @@ class GuidanceTest(unittest.TestCase):
             "guidance": [GUIDANCE_STRATEGIC],
             "expedite_request": False,
         }
-        result = validate(payload, WHOAMI, TODAY)
+        result = validate(payload, TODAY)
         self.assertIn("not_allowed", codes(result, "guidance"))
 
 
@@ -130,7 +129,6 @@ class PlaceholderUnfilledTest(unittest.TestCase):
             base_phone_payload(
                 driver="[needs your input \u2014 what's driving this for you right now?]"
             ),
-            WHOAMI,
             TODAY,
         )
         self.assertFalse(result["valid"])
@@ -145,7 +143,6 @@ class PlaceholderUnfilledTest(unittest.TestCase):
                     "How do we report it?",
                 ]
             ),
-            WHOAMI,
             TODAY,
         )
         self.assertFalse(result["valid"])
@@ -156,7 +153,6 @@ class PlaceholderUnfilledTest(unittest.TestCase):
             base_phone_payload(
                 question="[needs your input \u2014 what 3-5 specific questions...]"
             ),
-            WHOAMI,
             TODAY,
         )
         self.assertIn("placeholder_unfilled", codes(result, "question"))
@@ -166,7 +162,6 @@ class PlaceholderUnfilledTest(unittest.TestCase):
             base_phone_payload(
                 guidance=["[needs your input \u2014 pick Strategic, Technical, or both]"]
             ),
-            WHOAMI,
             TODAY,
         )
         self.assertIn("placeholder_unfilled", codes(result, "guidance"))
@@ -174,7 +169,6 @@ class PlaceholderUnfilledTest(unittest.TestCase):
     def test_deadline_placeholder_rejected_when_expedited(self):
         result = validate(
             base_phone_payload(expedite_request=True, deadline="[needs your input]"),
-            WHOAMI,
             TODAY,
         )
         self.assertIn("placeholder_unfilled", codes(result, "deadline"))
@@ -185,17 +179,41 @@ class PlaceholderUnfilledTest(unittest.TestCase):
             base_phone_payload(
                 details="[optional \u2014 team size, current tools, policies]"
             ),
-            WHOAMI,
             TODAY,
         )
         self.assertEqual(codes(result, "details"), [])
+
+
+class EmailTest(unittest.TestCase):
+    """DAAS-362: email is an optional reply-to override, never required.
+
+    The connector sets the email server-side from the authenticated session and
+    ians_whoami does not expose it, so a payload without an email is valid and
+    no whoami input is consulted.
+    """
+
+    def test_missing_email_is_valid(self):
+        payload = base_phone_payload()
+        self.assertNotIn("email_address", payload)
+        result = validate(payload, TODAY)
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertEqual(codes(result, "email_address"), [])
+
+    def test_valid_override_email_accepted(self):
+        result = validate(
+            base_phone_payload(email_address="exec.assistant@example.com"), TODAY
+        )
+        self.assertTrue(result["valid"], result["errors"])
+
+    def test_malformed_override_email_rejected(self):
+        result = validate(base_phone_payload(email_address="not-an-email"), TODAY)
+        self.assertIn("invalid", codes(result, "email_address"))
 
 
 class DeadlineTest(unittest.TestCase):
     def test_past_deadline_rejected(self):
         result = validate(
             base_phone_payload(expedite_request=True, deadline="2020-01-01"),
-            WHOAMI,
             TODAY,
         )
         self.assertIn("in_past", codes(result, "deadline"))
@@ -203,7 +221,6 @@ class DeadlineTest(unittest.TestCase):
     def test_tight_deadline_warns_not_errors(self):
         result = validate(
             base_phone_payload(expedite_request=True, deadline="2026-06-03"),
-            WHOAMI,
             TODAY,
         )
         self.assertTrue(result["valid"], result["errors"])
