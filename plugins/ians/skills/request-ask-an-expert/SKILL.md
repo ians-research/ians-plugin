@@ -60,7 +60,13 @@ If they aren't, show this message verbatim, then end gracefully without producin
 
 Render `{account manager email}` as the account manager email from the cached `ians_whoami` response when the connector exposes one; otherwise use `support@iansresearch.com`. Substitute the address into the sentence and keep every other word exactly as written. This is the entitlement/access path for existing clients — end gracefully, never surface a raw error or a broken-tool state.
 
-## Step 2.5 — Ground the request in IANS content first
+## Step 2.5 — Ground the request in IANS content first (warm requests only)
+
+**Cold-open gate (DAAS-363).** Skip this entire step on a **cold-open** AAE request — one where the user's opening turn is just a request to file an AAE with no prior substantive conversation to ground (no topic or problem has been discussed in-conversation, and no context was chained in from another Ask IANS Skill). On a cold open, do NOT call `ians_search` for grounding, do NOT surface source candidates, and do NOT ask the user to pick a source — forcing a content-selection step here is an unrequested barrier to the creation flow. Proceed straight to Step 3 and let the `must_ask` placeholders gather the driver and questions (inventing nothing).
+
+> **Scope note (DAAS-363 vs DAAS-173):** this does not reverse DAAS-173 — it scopes it. Grounding still runs on **warm** requests (a real topic was discussed in-conversation, or another skill chained in with context). It only removes the cold-open barrier where there is nothing to ground yet.
+
+When the request is **warm** (there is substantive conversation context or chained context to ground), continue:
 
 Before you draft Driver / Questions from open-web knowledge or your own synthesis, search IANS first. IANS has published content on most topics a CISO will raise, and a driver grounded in IANS sources reduces coordinator triage time.
 
@@ -106,20 +112,31 @@ The platform form opens with this question. Render this in the review with the s
 > 2. **Faculty Poll** — Get short, written responses from multiple faculty members on a topic. *Written deliverable. 4-6 business days. Broad perspectives from 5 Faculty.*
 > 3. **Don't Know?** (Undecided) — Feel free to send us your request. Our team is here to help select the best avenue to answer your specific question.
 
-Make a recommendation based on conversation context (use `scripts/recommend_resolution.py` for structured reasoning). Frame the recommendation as one line *after* the options:
+**Turnaround & scheduling timing — canonical statement (DAAS-364).** State this once, here; everywhere else in this skill *references* it instead of restating the numbers or re-warning about the distinction:
 
-> Based on your conversation, **{Phone | Faculty Poll | Undecided}** fits because {one-line reason}. You can change it.
+- **Faculty turnaround** is the faculty deliverable window, downstream — it begins *after* IANS Client Services schedules. The standard window per resolution is the one shown inline in each Resolution Type option above (**Phone / Undecided → 8-12 business days**, **Faculty Poll → 4-6 business days**). Expedite prioritizes the request but does not shorten the standard window.
+- **First Client Services contact** is the *scheduling* timing: an IANS Client Services coordinator reaches out within **24-48 hours**. This is **separate from** faculty turnaround — never conflate the scheduling call with the faculty deliverable window.
 
-**Always state why an AAE fits — a one-line rationale tied to the conversation.** Whenever an AAE is put in front of the user — whether this skill self-triggers or another Ask IANS Skill chains to it — lead with one sentence explaining *why faculty review is the right next step at this point in the conversation*. Use the format:
+When any later step needs to surface timing (Expedite comparison, deadline warning, post-submit confirmation, close), point back to this canonical statement rather than repeating the windows or the do-not-conflate warning.
+
+Make a recommendation based on conversation context using `scripts/recommend_resolution.py` for structured reasoning. **Whether you state a "why this fits" rationale is conditional on the script finding a real signal (DAAS-365)** — a forced rationale where none exists nudges invention, which this skill forbids elsewhere.
+
+**When `recommend_resolution.py` returns a signal** (non-empty `matched_signals`, i.e. a confident Phone/Faculty Poll recommendation): frame the recommendation as one line *after* the options, and lead with a rationale tied to the specific conversational signal.
+
+> Based on your conversation, **{Phone | Faculty Poll}** fits because {one-line reason}. You can change it.
 
 > Faculty review fits here because {specific signal in the conversation} — {what a faculty member adds that the AI can't}.
 
-Examples:
+- The rationale must tie to a **specific signal** in the conversation, not a generic value-prop. Generic framing like "you might want to talk to an expert" is not enough.
+- Examples:
+  - "Faculty review fits here because you're heading into a board conversation with hostile dynamics — a Faculty member can rehearse the hard questions with you."
+  - "Faculty review fits here because the regulatory framing is novel and post-breach — a Faculty member's judgment beats AI synthesis when the wrong frame creates legal exposure."
 
-- "Faculty review fits here because you're heading into a board conversation with hostile dynamics — a Faculty member can rehearse the hard questions with you."
-- "Faculty review fits here because the regulatory framing is novel and post-breach — a Faculty member's judgment beats AI synthesis when the wrong frame creates legal exposure."
+**When `recommend_resolution.py` returns NO signal** (empty `matched_signals` — e.g. a cold-open request with no problem yet on the table, where the script returns `recommendation: "Undecided"`): do **NOT** render a "fits because" line, and do **NOT** invent a rationale. Show the three Resolution Type options and let the user pick, with a neutral prompt:
 
-The rationale must tie to a **specific signal** in the conversation, not a generic value-prop. Generic framing like "you might want to talk to an expert" is not enough.
+> Which would you prefer? Pick an option above, or tell me a bit about what's prompting this and I'll suggest one.
+
+Never put words in the user's mouth on the no-signal path — the rationale only appears once a real signal exists.
 
 **Faculty Poll mis-scope nudge (DAAS-196 / DAAS-208).** Run this check **only when the user selects Faculty Poll** — do not run `check_poll_fit.py` for Phone or Undecided resolutions.
 
@@ -194,16 +211,11 @@ Skip section entirely for Faculty Poll.
 
 > Yes / No
 
-**Always surface the turnaround windows here**, before the user decides — they can't make an informed expedite choice without seeing the comparison. Render the windows for the selected resolution whether or not a deadline has been parsed:
+**Always surface the faculty turnaround window here**, before the user decides — they can't make an informed expedite choice without seeing it. Render the canonical window for the selected resolution (from the Turnaround & scheduling timing statement above), whether or not a deadline has been parsed:
 
-> **Turnaround for {resolution}:** {standard} business days standard (faculty deliverable, after scheduling); expedited requests are prioritized.
+> **Turnaround for {resolution}:** {canonical window for the resolution} (faculty deliverable, after scheduling); expedited requests are prioritized.
 
-Canonical **faculty turnaround** windows (downstream, after Client Services schedules — must match what IANS Client Services communicates to clients):
-
-- **Faculty Poll:** 4-6 business days standard, expedited prioritized.
-- **Phone / Undecided:** 8-12 business days standard, expedited prioritized.
-
-**First Client Services contact** is separate: an IANS Client Services coordinator reaches out within **24-48 hours** to schedule — do not conflate that scheduling window with the faculty turnaround above.
+(The 24-48h first Client Services contact and the scheduling-vs-turnaround distinction are already stated canonically above — reference them only if relevant; do not restate them here.)
 
 If yes, render:
 
@@ -211,12 +223,15 @@ If yes, render:
 
 Use `scripts/parse_urgency.py` to draft. Deadline must be ≥ today. If the parsed deadline is fewer than 14 calendar days out, append a warning:
 
-> *Note: this is {N} calendar days away. Standard turnaround is 8-12 business days for Phone, 4-6 for Faculty Poll. The expedite flag prioritizes your request, but it may still be tight.*
+> *Note: this is {N} calendar days away — shorter than the standard faculty turnaround for {resolution} (see the window in the options above). The expedite flag prioritizes your request, but it may still be tight.*
 
-#### Please confirm your email — *"Our Client Services team will use this to contact you about your request."*
+#### Email and submitter identity (server-side — do NOT render)
 
-- Pulled from `ians_whoami`. Render as the value, not a prompt:
-  > **Email:** {email from whoami}
+`ians_whoami` returns only entitlement flags (and, when on file, the *account manager's* contact) — it does **not** return the signed-in user's name or email. The connector sets the submitter identity and the reply-to email server-side from the authenticated IANS session.
+
+- Do NOT read Email or Submitter name from `ians_whoami`.
+- Do NOT render an `Email:` or `Submitter:` line, and never invent, guess, or placeholder an identity value.
+- Omit `email_address` from the payload so the server uses the signed-in user's email. Set `email_address` only when the user explicitly asks to route replies to a *different* address — that's a deliberate reply-to override, not identity confirmation.
 
 #### Scheduling (Phone/Undecided only)
 
@@ -231,20 +246,14 @@ Use `scripts/parse_scheduling.py` to draft if the user mentioned scheduling in c
 
 Skip entirely for Faculty Poll.
 
-### Submitter (read-only)
-
-Show what will be sent as the submitter, pulled from `ians_whoami`:
-
-> **Submitter:** {name} <{email}>
-
-User can't edit this — it comes from the authenticated session.
-
 ## Step 4 — Present the review
 
 **No partial reviews.** The first review message MUST render every required section for the resolution in a single message — never reveal a section only after the user prompts for it. The required section list is locked per resolution:
 
-- **Phone / Undecided:** Resolution Type, Driver and Context, Specific Questions, **Other Details**, Guidance Type, Expedite + Deadline (with turnaround windows), Email (read-only), **Scheduling**, Submitter (read-only).
-- **Faculty Poll:** Resolution Type, Driver and Context, Specific Questions, Expedite + Deadline (with turnaround windows), Email (read-only), Submitter (read-only). Faculty Poll **skips Other Details, Guidance, and Scheduling entirely** — do not show those headings.
+- **Phone / Undecided:** Resolution Type, Driver and Context, Specific Questions, **Other Details**, Guidance Type, Expedite + Deadline (with turnaround windows), **Scheduling**.
+- **Faculty Poll:** Resolution Type, Driver and Context, Specific Questions, Expedite + Deadline (with turnaround windows). Faculty Poll **skips Other Details, Guidance, and Scheduling entirely** — do not show those headings.
+
+Do not render an Email or Submitter section in any review — identity and reply-to email are set server-side from the authenticated session (see Step 3).
 
 For Phone/Undecided, **Other Details** and **Scheduling** always render on the first pass, even when `parse_scheduling.py` / detail extraction returned nothing — show their `[optional]` placeholders so the user learns the fields exist:
 
@@ -277,7 +286,7 @@ Run `validate_submission.py` and require `valid: true` before calling `ians_requ
 | Deadline | `deadline` (`YYYY-MM-DD`) |
 | Availability | `availability` |
 | Calendar link / EA | `calendarlink` |
-| Email | `email_address` |
+| (no review field; optional reply-to override, usually omitted) | `email_address` |
 | (no label) | `idempotency_key` (a fresh UUID) |
 | (no label) | `context` (`ask_ians_id` / `related_ians_content`) |
 
@@ -287,9 +296,10 @@ Write the locked payload to a temp JSON (the same one Step 5 submits), then call
 
 ```bash
 python ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/scripts/validate_submission.py \
-  --payload <path-to-payload.json> \
-  --whoami <path-to-ians-whoami-output.json>
+  --payload <path-to-payload.json>
 ```
+
+(The validator does not need identity input — email is set server-side from the authenticated session and is not a client-side required field.)
 
 Read the JSON result.
 
@@ -329,7 +339,9 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
 
 2. **Status `submitted`** — connector accepted the request. Surface verbatim (the connector returns `integration_request_id` for idempotency and internal reference; do not render it, a Salesforce case number, or a tracking link in the user-facing confirmation):
 
-   > Your Ask-an-Expert request has been submitted. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is typically **{faculty_window}** ({4-6 business days for Faculty Poll | 8-12 business days for Phone/Undecided}).
+   > Your Ask-an-Expert request has been submitted. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is the standard window for your selected resolution (**{faculty_window}**, the canonical window from the options).
+
+   Fill `{faculty_window}` from the canonical Turnaround & scheduling timing statement for the selected resolution — do not re-list both windows.
 
 3. **Status `connector_unavailable`** — the connector could not accept the submission (`tool_not_registered`, `server_error`, or equivalent). Surface the error **inline** and offer these three options verbatim:
 
@@ -353,10 +365,8 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
 
 End with:
 
-1. Clear statement of what just happened.
-2. Expected timeline with **two separate windows** (do not conflate them):
-   - **Client Services scheduling:** an IANS Client Services coordinator contacts you within **24-48 hours**.
-   - **Faculty turnaround** (after scheduling): **4-6 business days** for Faculty Poll, **8-12 business days** for Phone/Undecided.
+1. A clear statement of what just happened.
+2. The expected timeline — reuse the two windows from the Step 5 confirmation (Client Services scheduling vs. faculty turnaround). Do not re-list the numbers or re-warn about conflating them; the canonical statement and the distinction already live in the Resolution Type section and the Step 5 confirmation.
 
 **Who follows up:** the response loop is coordinated by **IANS Client Services**, not by faculty directly. Faculty produce the deliverable; IANS Client Services contacts the client. When you tell the user who they'll hear from, say "an IANS Client Services coordinator" — never "you'll hear back from faculty."
 
@@ -381,7 +391,7 @@ Read: ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/SKILL.md
 
 Then invoke this skill for **submit** (this release does not support scope mode). Pass conversation context.
 
-A chained invocation must still lead with the one-line rationale from Step 3 ("Faculty review fits here because {signal} — {what faculty adds}") tied to a specific signal in the conversation — the always-rationale rule applies identically to chained and self-triggered recommendations.
+A chained invocation carries conversation context, so `recommend_resolution.py` will normally return a signal — when it does, lead with the one-line rationale from Step 3 ("Faculty review fits here because {signal} — {what faculty adds}") tied to that specific signal. The conditional-rationale rule (DAAS-365) applies identically to chained and self-triggered recommendations: if no signal is present, follow the no-signal path (show options, invent no rationale).
 
 ## Out of scope
 
@@ -390,7 +400,7 @@ A chained invocation must still lead with the one-line rationale from Step 3 ("F
 - **Branded scoping .docx** — deferred until the `ians-design-system` skill ships; Step 1 refuses doc-only requests with the verbatim message above.
 - Internal stakeholders / attendees field — matches the platform form, which doesn't collect this.
 - Preferred contact method (phone vs email) — matches the platform form's current commented-out state.
-- Re-collection of email or phone — pulled from `ians_whoami`. Server-side identity is authoritative.
+- Re-collection of email, phone, or submitter name — identity and the reply-to email are set server-side from the authenticated IANS session. `ians_whoami` does NOT expose the user's name or email (only entitlement flags), so the skill never displays, asks for, or fabricates them. `email_address` is sent only as a deliberate reply-to override.
 - Ask IANS conversation linking via `ask_ians_id` — no Ask IANS → MCP bridge today.
 - Faculty matching, faculty preferences, or faculty profile lookup — coordinator's job.
 - Attachments / file uploads in the AAE request itself — not supported by the current connector contract.

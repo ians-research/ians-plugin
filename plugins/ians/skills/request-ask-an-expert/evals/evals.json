@@ -208,7 +208,7 @@
       "id": 170,
       "name": "no-partial-reviews-all-sections-render",
       "prompt": "I want to submit an Ask-an-Expert about our cloud IAM consolidation. Set it up as a Phone call.",
-      "expected_output": "Skill recommends Phone. The FIRST review message renders every required section for Phone/Undecided in a single message — Resolution Type, Driver, Specific Questions, Other Details, Guidance, Expedite + Deadline (with turnaround windows), Email (read-only), Scheduling, Submitter. Other Details and Scheduling appear on the first pass with [optional] placeholders even though nothing was extracted; the user is not forced to prompt for them. A Faculty Poll run instead skips Other Details, Guidance, and Scheduling entirely.",
+      "expected_output": "Skill recommends Phone. The FIRST review message renders every required section for Phone/Undecided in a single message — Resolution Type, Driver, Specific Questions, Other Details, Guidance, Expedite + Deadline (with turnaround windows), Scheduling. Other Details and Scheduling appear on the first pass with [optional] placeholders even though nothing was extracted; the user is not forced to prompt for them. No Email or Submitter section renders — identity is set server-side from the authenticated session (DAAS-362). A Faculty Poll run instead skips Other Details, Guidance, and Scheduling entirely.",
       "files": [],
       "notes": "DAAS-170. Reported by Kate Lombard — Scheduling never surfaced and Other Details only appeared after a follow-up prompt.",
       "structural_checklist": [
@@ -237,7 +237,7 @@
       "id": 173,
       "name": "ians-search-grounding-before-drafting",
       "prompt": "Set up an AAE about how peers are handling SEC cyber disclosure rules.",
-      "expected_output": "Before drafting Driver/Questions from open-web knowledge, the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability.",
+      "expected_output": "On a WARM request (a real topic was discussed in-conversation, or context was chained in), before drafting Driver/Questions from open-web knowledge the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability. On a COLD-OPEN request (no prior substantive conversation), the grounding step is skipped entirely (DAAS-363) — see eval 363.",
       "files": [],
       "notes": "DAAS-173. In Cowork Chat 4 the skill cited open-web sources despite IANS coverage.",
       "structural_checklist": [
@@ -281,14 +281,14 @@
       "id": 175,
       "name": "aae-recommendation-includes-tied-rationale",
       "prompt": "[Chained-skill scenario] Another Ask IANS Skill hits the limit of unsupervised synthesis on a post-breach litigation-prep question and recommends an AAE.",
-      "expected_output": "Whenever an AAE is recommended — self-triggered or chained — the skill leads with a one-line rationale tied to the specific signal in the conversation, in the format 'Faculty review fits here because {signal} — {what a faculty member adds that the AI can't}.' Generic 'you might want to talk to an expert' framing fails. The rationale ties to a concrete conversational signal (e.g., post-breach litigation exposure), not a generic value-prop.",
+      "expected_output": "When an AAE is recommended AND recommend_resolution.py returns a real signal (non-empty matched_signals) — self-triggered or chained — the skill leads with a one-line rationale tied to that specific signal, in the format 'Faculty review fits here because {signal} — {what a faculty member adds that the AI can't}.' Generic 'you might want to talk to an expert' framing fails. The rationale ties to a concrete conversational signal (e.g., post-breach litigation exposure), not a generic value-prop. When there is no signal (cold open), the rationale is NOT rendered and is not invented (DAAS-365) — see eval 365.",
       "files": [],
-      "notes": "DAAS-175. Applies to self-triggered and chained invocations.",
+      "notes": "DAAS-175 / DAAS-365. The rationale is conditional on a real signal; on a cold open the skill shows options without a forced rationale.",
       "structural_checklist": [
-        "SKILL.md documents the always-rationale rule with the format and 2-3 examples",
+        "SKILL.md documents the conditional-rationale rule with the format and 2-3 examples",
         "Rule applies to self-triggered and chained invocations",
         "Rationale ties to a specific signal in the conversation, not a generic value-prop",
-        "Skill never recommends an AAE without a tied rationale"
+        "Rationale renders only when recommend_resolution.py returns a signal; cold open shows options without inventing one"
       ]
     },
     {
@@ -323,14 +323,14 @@
       "id": 184,
       "name": "turnaround-windows-always-surfaced",
       "prompt": "Set up an AAE call about SOC tooling — no particular deadline.",
-      "expected_output": "At the Expedite section the skill surfaces faculty turnaround windows for the selected resolution (Faculty Poll 4-6 business days, Phone/Undecided 8-12 business days, expedited prioritized), labeled as downstream after scheduling. First Client Services contact (24-48 hours) is stated separately. Windows render even with no deadline. Post-submit confirmation restates both windows distinctly.",
+      "expected_output": "At the Expedite section the skill surfaces the faculty turnaround window for the selected resolution (the canonical window from the Resolution Type section — Faculty Poll 4-6 business days, Phone/Undecided 8-12 business days), labeled as downstream after scheduling. The 24-48 hour first Client Services contact is the canonical scheduling statement, kept separate from faculty turnaround. The window renders even with no deadline. The post-submit confirmation surfaces the scheduling window and the resolution's faculty window distinctly, sourced from the canonical statement rather than re-listing both windows (DAAS-364) — see eval 364.",
       "files": [],
-      "notes": "DAAS-184. Reported by Kate Lombard — windows only appeared when Phone was selected, so she couldn't compare expedited vs standard timing.",
+      "notes": "DAAS-184 / DAAS-364. Windows are surfaced for the selected resolution, sourced from a single canonical statement instead of being restated in multiple places.",
       "structural_checklist": [
-        "Expedite section shows faculty turnaround windows for the selected resolution",
-        "24-48 hour CS scheduling window stated separately from faculty turnaround",
-        "Windows render whether or not a deadline is set",
-        "Post-submit confirmation restates both windows distinctly"
+        "Expedite section surfaces the faculty turnaround window for the selected resolution",
+        "24-48 hour CS scheduling window kept separate from faculty turnaround",
+        "Window renders whether or not a deadline is set",
+        "Post-submit confirmation surfaces scheduling vs faculty windows distinctly, sourced from the canonical statement"
       ]
     },
     {
@@ -374,6 +374,63 @@
         "Faculty turnaround is separate downstream window",
         "8-12 business days not used as first-contact promise",
         "Step 5 and Step 6 wording aligned"
+      ]
+    },
+    {
+      "id": 362,
+      "name": "no-identity-fields-from-whoami",
+      "prompt": "Set up an AAE call about our cloud IAM consolidation roadmap.",
+      "expected_output": "Skill calls ians_whoami() for the entitlement gate only. Because ians_whoami returns just entitlement flags (and, when on file, the account manager's contact) and NOT the signed-in user's name or email, the form-shaped review renders NO Email line and NO Submitter section. The skill never invents, guesses, or placeholders an identity value. The locked payload omits email_address (the connector populates the reply-to email server-side from the authenticated session); email_address appears only when the user explicitly asks to route replies to a different address. validate_submission.py is run with --payload only (no --whoami) and passes without an email field.",
+      "files": [],
+      "notes": "DAAS-362. ians_whoami exposes entitlement flags only; the prior Email/Submitter rendering fabricated identity. Covered by evals/tests/test_validate_submission.py EmailTest.",
+      "structural_checklist": [
+        "Skill does not read Email or Submitter name from ians_whoami",
+        "No Email line and no Submitter section rendered in the review",
+        "No fabricated or placeholder identity value shown",
+        "Payload omits email_address unless an explicit reply-to override is requested",
+        "validate_submission.py succeeds without an email field and without --whoami"
+      ]
+    },
+    {
+      "id": 363,
+      "name": "no-grounding-step-on-cold-open",
+      "prompt": "Set up an Ask-an-Expert for me.",
+      "expected_output": "This is a cold-open request — the opening turn is just a request to file an AAE with no prior substantive conversation and no chained context. The skill SKIPS Step 2.5 grounding entirely (DAAS-363): it does not call ians_search for grounding, does not surface candidate IANS sources, and does not ask the user to pick a source. It proceeds straight to Step 3, where the must_ask placeholders gather the driver and questions without inventing anything. On a WARM request (a real topic was discussed, or another skill chained in context), grounding still runs per Step 2.5 — DAAS-173 is scoped, not reversed.",
+      "files": [],
+      "notes": "DAAS-363. Implementing DAAS-173 made grounding a forced content-selection barrier on cold opens. Scopes (does not reverse) DAAS-173: grounding remains on warm/chained requests.",
+      "structural_checklist": [
+        "Cold-open AAE request proceeds without a content-selection step",
+        "No ians_search grounding call and no source candidates surfaced on a cold open",
+        "Step 2.5 documents the cold-open gate and the DAAS-173 scope note (not a full reversal)",
+        "Warm/chained requests still run grounding per Step 2.5"
+      ]
+    },
+    {
+      "id": 364,
+      "name": "turnaround-windows-stated-once-canonical",
+      "prompt": "[SKILL.md structure check.] Verify each turnaround window is stated once in a canonical place and referenced elsewhere.",
+      "expected_output": "Each faculty turnaround window appears once as the canonical statement co-located with the Resolution Type descriptions (Phone/Undecided 8-12 business days; Faculty Poll 4-6 business days), labeled as the downstream faculty deliverable window. The 24-48h first Client Services contact (scheduling) is stated once and explicitly labeled separate from faculty turnaround, with the do-not-conflate warning appearing a single time. The Expedite section, the deadline warning, the Step 5 confirmation, and the Step 6 close all REFERENCE the canonical statement (surfacing the resolution's window for the user) rather than restating both windows or repeating the conflation warning.",
+      "files": [],
+      "notes": "DAAS-364. Turnaround windows and the scheduling-vs-turnaround warning were restated three times; consolidated to a single canonical statement that other steps reference.",
+      "structural_checklist": [
+        "Each faculty turnaround window stated once in the canonical Resolution Type statement",
+        "Scheduling-call timing (24-48h) stated once and labeled separate from turnaround",
+        "do-not-conflate warning appears a single time, not repeated per step",
+        "Expedite, deadline warning, Step 5, and Step 6 reference the canonical statement instead of restating numbers"
+      ]
+    },
+    {
+      "id": 365,
+      "name": "no-forced-rationale-on-cold-open",
+      "prompt": "Set up an Ask-an-Expert for me.",
+      "expected_output": "On a cold open with no problem on the table, recommend_resolution.py returns recommendation 'Undecided' with empty matched_signals (no signal). The skill does NOT render a 'fits because' line and does NOT invent a rationale (DAAS-365). It shows the three Resolution Type options and a neutral prompt asking the user to pick or say more, putting no words in the user's mouth. When a real signal IS present (warm/chained), the skill leads with the rationale tied to that specific signal per Step 3.",
+      "files": [],
+      "notes": "DAAS-365. The 'always say why an AAE fits' rule forced a rationale that didn't exist on a cold open, nudging invention the skill forbids elsewhere. Now conditional on recommend_resolution.py returning a signal.",
+      "structural_checklist": [
+        "'fits because' line renders only when recommend_resolution.py returns a signal",
+        "Cold open shows the three options without a forced rationale",
+        "No invented rationale appears anywhere in the cold-open path",
+        "Neutral pick-an-option prompt shown on the no-signal path"
       ]
     }
   ]
