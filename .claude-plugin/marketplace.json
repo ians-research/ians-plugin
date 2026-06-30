@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "name": "ians-tools",
+  "name": "ians-plugins",
   "version": "1.0.1",
   "description": "IANS plugins for Claude Code and Cowork. Skills that integrate with the IANS platform via our MCP server.",
   "owner": {
