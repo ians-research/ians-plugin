@@ -236,7 +236,7 @@
     {
       "id": 173,
       "name": "ians-search-grounding-before-drafting",
-      "prompt": "Set up an AAE about how peers are handling SEC cyber disclosure rules.",
+      "prompt": "[Warm/chained scenario] We already discussed SEC cyber disclosure rules and how peers are handling them. Please set up an AAE based on that context.",
       "expected_output": "On a WARM request (a real topic was discussed in-conversation, or context was chained in), before drafting Driver/Questions from open-web knowledge the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability. On a COLD-OPEN request (no prior substantive conversation), the grounding step is skipped entirely (DAAS-363) — see eval 363.",
       "files": [],
       "notes": "DAAS-173. In Cowork Chat 4 the skill cited open-web sources despite IANS coverage.",
