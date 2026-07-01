@@ -12,9 +12,12 @@ More IANS skills will be added under [`skills/`](./skills/) over time. Skills in
 
 ## Requirements
 
-- Claude Code or Claude Cowork
+- Claude Code, Claude Desktop, or Claude Cowork
 - Active IANS account with MCP access
-- **IANS MCP** — bundled with this plugin (declared in [`.mcp.json`](./.mcp.json)). **In Claude Code**, it registers automatically when the plugin is installed, and on first use you complete a one-time IANS sign-in (OAuth) so `ians_whoami` and the submission tooling can authenticate. **On Claude Cowork / Claude Desktop, auto-registration is not yet supported** — connect the IANS MCP through your connector settings (or an admin-provisioned connector) instead.
+- **IANS MCP** — bundled with this plugin (declared in [`.mcp.json`](./.mcp.json)). How you connect it depends on the app:
+  - **Claude Code** — registers automatically when the plugin is installed. On first use you complete a one-time IANS sign-in (OAuth) so `ians_whoami` and the submission tooling can authenticate. No manual setup.
+  - **Claude Desktop** — the bundled connector is *not* auto-registered (plugin auto-registration is a Claude Code feature). Add it once yourself via **Settings → Connectors → Add custom connector**, using the remote MCP URL `https://mcp.iansresearch.com/mcp`, then complete the one-time IANS sign-in. On Team/Enterprise plans a workspace **Owner** adds the connector and members enable it.
+  - **Claude Cowork** — end users can't add remote MCP servers directly, so the IANS connector is made available by your organization's admin (managed MCP servers / organization plugins) or from the Claude Connector Directory. Contact your IANS account team if it isn't already available in your workspace.
 - **Python 3** on the path when a skill runs scripts via the Bash tool
 
 ## Installation
@@ -24,7 +27,7 @@ More IANS skills will be added under [`skills/`](./skills/) over time. Skills in
 /plugin install ians@ians-tools
 ```
 
-Installing the plugin enables every skill it contains. **In Claude Code**, it also registers the bundled IANS MCP connector automatically (no separate `/mcp` setup); the first time a skill calls the connector, Claude Code prompts you to sign in to IANS once (OAuth). After that, skills self-invoke based on conversation context, or you can call them explicitly (the exact slash command depends on Claude Code's plugin naming). On **Claude Cowork / Claude Desktop**, the bundled connector is not auto-registered yet — see [Requirements](#requirements) for how to connect the IANS MCP there.
+Installing the plugin enables every skill it contains. **In Claude Code**, it also registers the bundled IANS MCP connector automatically (no separate `/mcp` setup); the first time a skill calls the connector, Claude Code prompts you to sign in to IANS once (OAuth). After that, skills self-invoke based on conversation context, or you can call them explicitly (the exact slash command depends on Claude Code's plugin naming). On **Claude Desktop and Claude Cowork**, the bundled connector is not auto-registered (that's a Claude Code feature) — see [Requirements](#requirements) for the per-app connect steps.
 
 ## Example prompts
 
