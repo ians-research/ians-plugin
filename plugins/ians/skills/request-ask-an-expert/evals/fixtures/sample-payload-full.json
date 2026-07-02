@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "generatedAt": "2026-05-05T14:30:00Z",
-  "generatedBy": "ask-ians-skills/request-ask-an-expert@0.2.0-alpha",
+  "generatedBy": "request-ask-an-expert@sample",
   "resolution": "Phone",
   "driver": "We're integrating an acquired company's Azure AD identity stack into our Okta-based IdP for our financial services parent company. The CISO needs a recommendation by mid-June for the board's June 24 meeting because the M&A close is approaching and the board has been asking about our integration timeline.",
   "question": "1. What's the right federation strategy between Okta (primary) and Azure AD (acquired)?\n2. Should we consolidate to a single IdP, and if so, on what timeline?\n3. How do we handle cross-tenant trust securely without expanding the attack surface?",
@@ -10,7 +10,7 @@
   "expedite_request": true,
   "deadline": "2026-06-24",
   "availability": "Tuesdays and Thursdays after 2pm ET preferred, week of June 9 ideally",
-  "calendarlink": "https://calendly.com/javier-rivera",
+  "calendarlink": "https://calendly.com/sample-ciso",
   "context": {
     "ask_ians_id": null,
     "related_ians_content": [
@@ -19,7 +19,7 @@
     ]
   },
   "submitter": {
-    "name": "Javier Rivera",
-    "email": "jrivera@iansresearch.com"
+    "name": "Sample User",
+    "email": "sample.user@example.com"
   }
 }

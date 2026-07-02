@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/check_poll_fit.py (DAAS-196 / DAAS-208).
+"""Unit tests for scripts/check_poll_fit.py.
 
 Run from the skill root:
     python -m unittest discover -s evals/tests -v

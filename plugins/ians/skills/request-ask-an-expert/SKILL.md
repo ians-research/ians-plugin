@@ -16,7 +16,7 @@ User-facing prompts are quoted verbatim in this SKILL.md. Use the exact text —
 
 Call `ians_whoami()` first. Cache the response.
 
-If the call fails, the IANS connector isn't connected. Refuse and show this message verbatim (**Gate 1 — plugin installed, connector not connected**; DAAS-288 final approved language):
+If the call fails, the IANS connector isn't connected. Refuse and show this message verbatim (**Gate 1 — plugin installed, connector not connected**):
 
 > The IANS skills run on the IANS connector, which isn't connected yet. Connect it in your Claude connector settings, then ask me again.
 >
@@ -54,7 +54,7 @@ Check connector-payload entitlement (AAE access) from the cached `ians_whoami` r
 
 If the user is entitled: continue.
 
-If they aren't, show this message verbatim, then end gracefully without producing a submission or artifact (**Gate 2 — connected client, account not enabled for the connector**; DAAS-288 final approved language):
+If they aren't, show this message verbatim, then end gracefully without producing a submission or artifact (**Gate 2 — connected client, account not enabled for the connector**):
 
 > **You're connected, but connector access isn't included in your current IANS subscription.** Connector access is a separate add-on. To get it, contact your IANS account manager at {account manager email} and ask for more information.
 
@@ -62,9 +62,9 @@ Render `{account manager email}` as the account manager email from the cached `i
 
 ## Step 2.5 — Ground the request in IANS content first (warm requests only)
 
-**Cold-open gate (DAAS-363).** Skip this entire step on a **cold-open** AAE request — one where the user's opening turn is just a request to file an AAE with no prior substantive conversation to ground (no topic or problem has been discussed in-conversation, and no context was chained in from another Ask IANS Skill). On a cold open, do NOT call `ians_search` for grounding, do NOT surface source candidates, and do NOT ask the user to pick a source — forcing a content-selection step here is an unrequested barrier to the creation flow. Proceed straight to Step 3 and let the `must_ask` placeholders gather the driver and questions (inventing nothing).
+**Cold-open gate.** Skip this entire step on a **cold-open** AAE request — one where the user's opening turn is just a request to file an AAE with no prior substantive conversation to ground (no topic or problem has been discussed in-conversation, and no context was chained in from another Ask IANS Skill). On a cold open, do NOT call `ians_search` for grounding, do NOT surface source candidates, and do NOT ask the user to pick a source — forcing a content-selection step here is an unrequested barrier to the creation flow. Proceed straight to Step 3 and let the `must_ask` placeholders gather the driver and questions (inventing nothing).
 
-> **Scope note (DAAS-363 vs DAAS-173):** this does not reverse DAAS-173 — it scopes it. Grounding still runs on **warm** requests (a real topic was discussed in-conversation, or another skill chained in with context). It only removes the cold-open barrier where there is nothing to ground yet.
+> **Scope note:** this does not reverse the grounding rule — it scopes it. Grounding still runs on **warm** requests (a real topic was discussed in-conversation, or another skill chained in with context). It only removes the cold-open barrier where there is nothing to ground yet.
 
 When the request is **warm** (there is substantive conversation context or chained context to ground), continue:
 
@@ -112,14 +112,14 @@ The platform form opens with this question. Render this in the review with the s
 > 2. **Faculty Poll** — Get short, written responses from multiple faculty members on a topic. *Written deliverable. 4-6 business days. Broad perspectives from 5 Faculty.*
 > 3. **Don't Know?** (Undecided) — Feel free to send us your request. Our team is here to help select the best avenue to answer your specific question.
 
-**Turnaround & scheduling timing — canonical statement (DAAS-364).** State this once, here; everywhere else in this skill *references* it instead of restating the numbers or re-warning about the distinction:
+**Turnaround & scheduling timing — canonical statement.** State this once, here; everywhere else in this skill *references* it instead of restating the numbers or re-warning about the distinction:
 
 - **Faculty turnaround** is the faculty deliverable window, downstream — it begins *after* IANS Client Services schedules. The standard window per resolution is the one shown inline in each Resolution Type option above (**Phone / Undecided → 8-12 business days**, **Faculty Poll → 4-6 business days**). Expedite prioritizes the request but does not shorten the standard window.
 - **First Client Services contact** is the *scheduling* timing: an IANS Client Services coordinator reaches out within **24-48 hours**. This is **separate from** faculty turnaround — never conflate the scheduling call with the faculty deliverable window.
 
 When any later step needs to surface timing (Expedite comparison, deadline warning, post-submit confirmation, close), point back to this canonical statement rather than repeating the windows or the do-not-conflate warning.
 
-Make a recommendation based on conversation context using `scripts/recommend_resolution.py` for structured reasoning. **Whether you state a "why this fits" rationale is conditional on the script finding a real signal (DAAS-365)** — a forced rationale where none exists nudges invention, which this skill forbids elsewhere.
+Make a recommendation based on conversation context using `scripts/recommend_resolution.py` for structured reasoning. **Whether you state a "why this fits" rationale is conditional on the script finding a real signal** — a forced rationale where none exists nudges invention, which this skill forbids elsewhere.
 
 **When `recommend_resolution.py` returns a signal** (non-empty `matched_signals`, i.e. a confident Phone/Faculty Poll recommendation): frame the recommendation as one line *after* the options, and lead with a rationale tied to the specific conversational signal.
 
@@ -138,7 +138,7 @@ Make a recommendation based on conversation context using `scripts/recommend_res
 
 Never put words in the user's mouth on the no-signal path — the rationale only appears once a real signal exists.
 
-**Faculty Poll mis-scope nudge (DAAS-196 / DAAS-208).** Run this check **only when the user selects Faculty Poll** — do not run `check_poll_fit.py` for Phone or Undecided resolutions.
+**Faculty Poll mis-scope nudge.** Run this check **only when the user selects Faculty Poll** — do not run `check_poll_fit.py` for Phone or Undecided resolutions.
 
 When the user selects **Faculty Poll**, run `scripts/check_poll_fit.py` against the drafted questions (and driver if present):
 
@@ -201,7 +201,7 @@ Required for Phone/Undecided. Use `scripts/infer_guidance.py` to draft the selec
 
 > `[needs your input — pick Strategic, Technical, or both]`
 
-The locked payload must carry the **canonical Salesforce picklist values exactly** — `"Strategic / Executive"` and `"Technical / Tactical"` (with spaces around the slash). Short forms like `"Strategic"` are silently dropped by the platform form. `infer_guidance.py` already emits the canonical strings, and `validate_submission.py` normalizes short-form aliases with a warning — don't hand-write the short form into the payload.
+The locked payload must carry the **canonical picklist values exactly** — `"Strategic / Executive"` and `"Technical / Tactical"` (with spaces around the slash). Short forms like `"Strategic"` are silently dropped by the platform form. `infer_guidance.py` already emits the canonical strings, and `validate_submission.py` normalizes short-form aliases with a warning — don't hand-write the short form into the payload.
 
 Skip section entirely for Faculty Poll.
 
@@ -333,11 +333,11 @@ Loop: apply the user's edits, re-run `validate_submission.py`, and only proceed 
 
 **Hard rule — connector submission is the only write path; never redirect to the web form.** When the IANS MCP is connected (Step 0 passed) and the user is entitled (Step 2 passed), this skill submits **through the connector**. Do NOT tell the user to go fill out the Ask-an-Expert form on iansresearch.com, and do NOT hand them a website link in place of submitting. The Beta connector counts as available: if `ians_request_aae` is registered, use it.
 
-**Hard rule — submit by calling the `ians_request_aae` MCP tool directly.** In a live MCP session you MUST call the `ians_request_aae` tool directly with the canonical payload. Do NOT use `submit_via_connector.py` as the live submit path — it is a contract/test harness with no real connector call, and in a normal session it cannot see the registered tool, so it falsely returns `connector_unavailable` (which sends you down the graceful-failure path for no reason). Do NOT fabricate a success message. If the tool call fails, surface the error inline — never continue silently or pretend the request was sent.
+**Hard rule — submit by calling the `ians_request_aae` MCP tool directly.** In a live MCP session you MUST call the `ians_request_aae` tool directly with the canonical payload. Do NOT fabricate a success message. If the tool call fails, surface the error inline — never continue silently or pretend the request was sent.
 
-1. Submit by calling the `ians_request_aae` MCP tool directly with the canonical connector payload — the **Input** shape documented in the Connector contract below. (`submit_via_connector.py` documents this same payload shape and is used only for offline tests via `--mock-response`; it is not the live submit path.)
+1. Submit by calling the `ians_request_aae` MCP tool directly with the canonical connector payload — the **Input** shape documented in the Connector contract below.
 
-2. **Status `submitted`** — connector accepted the request. Surface verbatim (the connector returns `integration_request_id` for idempotency and internal reference; do not render it, a Salesforce case number, or a tracking link in the user-facing confirmation):
+2. **Status `submitted`** — connector accepted the request. Surface verbatim (the connector returns `integration_request_id` for idempotency and internal reference; do not render it, a case number, or a tracking link in the user-facing confirmation):
 
    > Your Ask-an-Expert request has been submitted. An IANS Client Services coordinator will contact you within **24-48 hours** to schedule. After scheduling, faculty turnaround is the standard window for your selected resolution (**{faculty_window}**, the canonical window from the options).
 
@@ -374,10 +374,10 @@ Don't promise specific faculty members or specific dates.
 
 ## Connector contract
 
-`ians_request_aae` submits directly to IANS when the connector is available. The skill calls this MCP tool directly (not through `submit_via_connector.py`, which is a test-only harness). There is no JSON-artifact fallback — when the connector is unavailable, the skill surfaces graceful failure options (retry, contact Client Services, save as scope draft).
+`ians_request_aae` submits directly to IANS when the connector is available. The skill calls this MCP tool directly. There is no JSON-artifact fallback — when the connector is unavailable, the skill surfaces graceful failure options (retry, contact Client Services, save as scope draft).
 
 - **Input** matches the JSON shape the platform AAE form posts. `origin` and `submitter` are server-populated, NOT in the skill's input.
-- **Output**: `status: "submitted"`, `integration_request_id` (request reference parsed from the Salesforce status message; may be null — retained for idempotency and internal reference, not rendered to the user), `expected_response_window` (computed client-side from the resolution), `submitted_at`, `idempotency_key`. The connector does **not** return a Salesforce case number or a portal tracking URL, and the skill renders neither `integration_request_id` nor a tracking link in the user-facing confirmation.
+- **Output**: `status: "submitted"`, `integration_request_id` (request reference parsed from the destination system's status message; may be null — retained for idempotency and internal reference, not rendered to the user), `expected_response_window` (computed client-side from the resolution), `submitted_at`, `idempotency_key`. The connector does **not** return a case number or a portal tracking URL, and the skill renders neither `integration_request_id` nor a tracking link in the user-facing confirmation.
 - **Error model**: `entitlement_missing`, `validation_failed`, `rate_limited`; transient/unavailable paths return `connector_unavailable` with retry/contact/scope-draft options. Unknown `error_code` values return `status: "error"` with `retryable: false` and `details.original_error_code` — not `connector_unavailable`.
 - **Idempotency**: `idempotency_key` prevents duplicate cases on retry.
 
@@ -391,7 +391,7 @@ Read: ${CLAUDE_PLUGIN_ROOT}/skills/request-ask-an-expert/SKILL.md
 
 Then invoke this skill for **submit** (this release does not support scope mode). Pass conversation context.
 
-A chained invocation carries conversation context, so `recommend_resolution.py` will normally return a signal — when it does, lead with the one-line rationale from Step 3 ("Faculty review fits here because {signal} — {what faculty adds}") tied to that specific signal. The conditional-rationale rule (DAAS-365) applies identically to chained and self-triggered recommendations: if no signal is present, follow the no-signal path (show options, invent no rationale).
+A chained invocation carries conversation context, so `recommend_resolution.py` will normally return a signal — when it does, lead with the one-line rationale from Step 3 ("Faculty review fits here because {signal} — {what faculty adds}") tied to that specific signal. The conditional-rationale rule applies identically to chained and self-triggered recommendations: if no signal is present, follow the no-signal path (show options, invent no rationale).
 
 ## Out of scope
 
@@ -410,11 +410,10 @@ A chained invocation carries conversation context, so `recommend_resolution.py` 
 ## Scripts
 
 - `scripts/recommend_resolution.py` — Heuristic resolution recommender (Phone / Faculty Poll / Undecided) with one-line reasoning.
-- `scripts/check_poll_fit.py` — Detects mis-scoped Faculty Poll questions; emits a suggestion-only Phone nudge (DAAS-196 / DAAS-208).
+- `scripts/check_poll_fit.py` — Detects mis-scoped Faculty Poll questions; emits a suggestion-only Phone nudge.
 - `scripts/draft_payload.py` — Extracts Driver / Question / Details from conversation transcript with cap and resolution-specific shape enforcement.
 - `scripts/infer_guidance.py` — Strategic / Technical inference. Empty array signals "must ask the user."
 - `scripts/parse_urgency.py` — Natural language urgency cues → `expedite_request` + ISO date.
 - `scripts/parse_scheduling.py` — Combined scheduling input → `availability` / `calendarlink` routing.
-- `scripts/submit_via_connector.py` — Contract/test harness that documents the `ians_request_aae` payload shape and response handling. NOT the live submit path: the skill calls `ians_request_aae` directly in Step 5. Used only for offline tests via `--mock-response`; in a live session its env-var check cannot see the registered tool and it returns `connector_unavailable`.
-- `scripts/validate_submission.py` — Required-field gate matching the platform AAE form's required rules. Run before submit; exit code 0 = valid, 1 = invalid. The skill MUST call this in Step 4.5 before calling `ians_request_aae`. Rejects unfilled review placeholders (`placeholder_unfilled`), canonicalizes the question shape, and normalizes short-form guidance to the canonical Salesforce picklist labels.
+- `scripts/validate_submission.py` — Required-field gate matching the platform AAE form's required rules. Run before submit; exit code 0 = valid, 1 = invalid. The skill MUST call this in Step 4.5 before calling `ians_request_aae`. Rejects unfilled review placeholders (`placeholder_unfilled`), canonicalizes the question shape, and normalizes short-form guidance to the canonical picklist labels.
 - `scripts/aae_common.py` — Shared helpers imported by the scripts above: canonical question serialization (list or string → `"1. Q\n2. Q"`, sub-labels stripped), guidance canonicalization (`"Strategic / Executive"` / `"Technical / Tactical"`), and unfilled-placeholder detection. Not a CLI.

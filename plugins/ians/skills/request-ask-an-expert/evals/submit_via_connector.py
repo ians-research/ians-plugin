@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-IANS Request Ask-an-Expert — Connector Submission Wrapper
+IANS Request Ask-an-Expert — Connector contract/test harness (dev-only).
 
-Wraps the `ians_request_aae` MCP tool. This script:
+Lives under evals/ and is NOT shipped in the client bundle. The skill's live
+submit path calls the `ians_request_aae` MCP tool directly; this harness
+exists so maintainers can exercise the connector contract offline:
 
   1. Detects tool registration. When the connector is unavailable, returns
      {status: "connector_unavailable"} so the skill surfaces graceful failure
@@ -14,8 +16,8 @@ Wraps the `ians_request_aae` MCP tool. This script:
   3. Provides a deterministic mock path for testing (--mock-response) so we
      can exercise success and error cases without a live connector.
 
-Usage:
-    python submit_via_connector.py \\
+Usage (from the skill root):
+    python evals/submit_via_connector.py \\
         --payload <path-to-payload-json> \\
         [--mock-response <path-to-mock-response-json>] \\
         [--mock-tool-not-registered]
@@ -34,7 +36,7 @@ Output JSON to stdout (success):
 }
 
 The connector (`ians_request_aae`) returns `integration_request_id` as the
-request reference — there is no Salesforce case number or portal tracking URL
+request reference — there is no case number or portal tracking URL
 in its response. The id is retained in this output for idempotency and internal
 reference; the skill does not render it (or any tracking link) in the
 user-facing confirmation.
@@ -70,7 +72,11 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from aae_common import canonicalize_questions, normalize_guidance
+# The shared helpers live in the shipped scripts/ directory, one level up from
+# this dev-only evals/ harness.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
+from aae_common import canonicalize_questions, normalize_guidance  # noqa: E402
 
 # Faculty turnaround windows by resolution (downstream, after CS scheduling).
 RESPONSE_WINDOWS = {
@@ -116,7 +122,7 @@ ERROR_RETRYABLE = {
     "rate_limited": True,
 }
 
-# Error codes that map to graceful connector-unavailable handling (DAAS-194).
+# Error codes that map to graceful connector-unavailable handling.
 CONNECTOR_UNAVAILABLE_CODES = frozenset({"server_error", "tool_not_registered"})
 
 
@@ -155,8 +161,8 @@ def shape_success(
     """Shape the connector's success response for the skill.
 
     The `ians_request_aae` connector returns `integration_request_id` (parsed
-    from the Salesforce status message) as the request reference. It does not
-    return a Salesforce case number or a portal tracking URL. We keep the
+    from the destination system's status message) as the request reference. It
+    does not return a case number or a portal tracking URL. We keep the
     integration request id in the shaped output for idempotency and internal
     reference, but the skill does not render it (or any tracking link) to the
     user. The faculty turnaround window is computed client-side from the

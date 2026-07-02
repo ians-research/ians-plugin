@@ -1,8 +1,8 @@
 {
-  "_comment": "INPUT fixture for the v0.4.0 canonical-shape feature (DAAS-167/168). `question` is intentionally a list and `guidance` uses short-form aliases so the scripts exercise canonicalize_questions() and normalize_guidance(); the canonical OUTPUT is what validate_submission.py / build_connector_payload produce from it, e.g. question \"1. How exposed are we...\\n2. ...\" and guidance [\"Strategic / Executive\", \"Technical / Tactical\"]. Not an already-canonical payload.",
+  "_comment": "INPUT fixture for the canonical-shape rules. `question` is intentionally a list and `guidance` uses short-form aliases so the scripts exercise canonicalize_questions() and normalize_guidance(); the canonical OUTPUT is what validate_submission.py / build_connector_payload produce from it, e.g. question \"1. How exposed are we...\\n2. ...\" and guidance [\"Strategic / Executive\", \"Technical / Tactical\"]. Not an already-canonical payload.",
   "schemaVersion": "1.0",
   "generatedAt": "2026-05-30T16:00:00Z",
-  "generatedBy": "ask-ians-skills/request-ask-an-expert@0.4.0",
+  "generatedBy": "request-ask-an-expert@sample",
   "resolution": "Phone",
   "driver": "An active geopolitical conflict has our board asking how exposed we are to spillover cyber risk. The CISO needs a defensible position by the next board meeting because the audit committee has started asking about nation-state threat readiness.",
   "question": [
@@ -15,7 +15,7 @@
   "expedite_request": true,
   "deadline": "2026-06-24",
   "availability": "Tuesdays and Thursdays after 2pm ET, week of June 15 preferred",
-  "calendarlink": "https://calendly.com/dparizher",
+  "calendarlink": "https://calendly.com/sample-ciso",
   "context": {
     "ask_ians_id": null,
     "related_ians_content": [
@@ -23,7 +23,7 @@
     ]
   },
   "submitter": {
-    "name": "Dan Parizher",
-    "email": "dparizher@iansresearch.com"
+    "name": "Sample User",
+    "email": "sample.user@example.com"
   }
 }

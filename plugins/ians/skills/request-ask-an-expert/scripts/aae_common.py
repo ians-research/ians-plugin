@@ -5,7 +5,7 @@ IANS Request Ask-an-Expert — Shared payload helpers.
 Single source of truth for the three places the AAE skill scripts have to
 agree on the *shape* of a locked payload:
 
-  1. Question serialization (DAAS-167). The `question` field can arrive as a
+  1. Question serialization. The `question` field can arrive as a
      ``list[str]`` (per-question items the model drafted) or as a
      pre-serialized string ("1. Q\\n2. Q"). Faculty read these verbatim, so the
      skill emits ONE canonical form — a newline-joined, 1-indexed numbered list
@@ -18,30 +18,30 @@ agree on the *shape* of a locked payload:
 
          "1. How exposed are we?\\n2. How do we respond?"
 
-  2. Guidance values (DAAS-168). The platform AAE form / Salesforce picklist
-     stores the long labels "Strategic / Executive" and "Technical / Tactical"
-     (spaces around the slash). The skill historically emitted the short form
-     ("Strategic"), which Salesforce silently drops. We canonicalize to the
-     long form and accept the short form as an alias on input.
+  2. Guidance values. The platform AAE form's picklist stores the long labels
+     "Strategic / Executive" and "Technical / Tactical" (spaces around the
+     slash). The skill historically emitted the short form ("Strategic"),
+     which the platform form silently drops. We canonicalize to the long form
+     and accept the short form as an alias on input.
 
-  3. Placeholder detection (DAAS-169). The form-shaped review renders editor
+  3. Placeholder detection. The form-shaped review renders editor
      placeholders like "[needs your input — ...]". If one of those survives
      into the locked payload, the field is unfilled and must NOT submit.
 
 These helpers are imported by ``validate_submission.py``,
-``submit_via_connector.py``, ``check_poll_fit.py``, and ``infer_guidance.py``.
+``check_poll_fit.py``, ``infer_guidance.py``, and the dev-only eval harness.
 """
 
 from __future__ import annotations
 
 import re
 
-# --- Guidance canonicalization (DAAS-168) -----------------------------------
+# --- Guidance canonicalization -----------------------------------------------
 
 GUIDANCE_STRATEGIC = "Strategic / Executive"
 GUIDANCE_TECHNICAL = "Technical / Tactical"
 
-#: Canonical Salesforce picklist values for the Guidance Type field.
+#: Canonical picklist values for the Guidance Type field.
 CANONICAL_GUIDANCE = (GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL)
 
 #: Accepted short-form / variant spellings → canonical value. Keys are matched
@@ -85,7 +85,7 @@ def guidance_to_list(value: object) -> list[str]:
 
 
 def normalize_guidance(value: object) -> tuple[list[str], bool, list[str]]:
-    """Normalize guidance tokens to canonical Salesforce picklist values.
+    """Normalize guidance tokens to the canonical picklist values.
 
     Short-form aliases ("Strategic", "Technical", "Strategic/Executive") are
     mapped to the canonical long form. Order is preserved and duplicates are
@@ -116,7 +116,7 @@ def normalize_guidance(value: object) -> tuple[list[str], bool, list[str]]:
     return canonical, normalized_from_alias, unknown
 
 
-# --- Placeholder detection (DAAS-169) ---------------------------------------
+# --- Placeholder detection ---------------------------------------------------
 
 #: Literal placeholder strings rendered by the form-shaped review. Kept in sync
 #: with the placeholders quoted in SKILL.md Step 3.
@@ -172,7 +172,7 @@ def is_placeholder(value: object) -> bool:
     return False
 
 
-# --- Question canonicalization (DAAS-167) -----------------------------------
+# --- Question canonicalization ------------------------------------------------
 
 _NUMBER_PREFIX_RE = re.compile(r"^\s*\d+\s*[\.\):]\s*")
 
