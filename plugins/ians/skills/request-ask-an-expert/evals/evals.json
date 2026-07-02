@@ -151,7 +151,7 @@
         "fixtures/sample-payload-full.json",
         "fixtures/mock-connector-validation-error.json"
       ],
-      "notes": "Sprint 3 unit-flavor test. Catches regressions in error mapping or message phrasing.",
+      "notes": "Unit-flavor test. Catches regressions in error mapping or message phrasing.",
       "structural_checklist": [
         "Status is 'error'",
         "error_code matches input",

@@ -172,7 +172,7 @@ def is_placeholder(value: object) -> bool:
     return False
 
 
-# --- Question canonicalization ------------------------------------------------
+# --- Question canonicalization -----------------------------------------------
 
 _NUMBER_PREFIX_RE = re.compile(r"^\s*\d+\s*[\.\):]\s*")
 

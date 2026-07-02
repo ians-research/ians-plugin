@@ -41,8 +41,8 @@ ians-plugin/
         └── skills/
             └── request-ask-an-expert/
                 ├── SKILL.md
-                ├── scripts/        # draft, validate, submit, poll-fit check
-                └── evals/          # scenario fixtures (dev-only, not shipped)
+                ├── scripts/        # draft, validate, poll-fit check
+                └── evals/          # scenario fixtures + test harness (dev-only, not shipped)
 ```
 
 ## Adding a new IANS skill
