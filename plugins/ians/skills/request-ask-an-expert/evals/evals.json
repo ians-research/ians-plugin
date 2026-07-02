@@ -234,21 +234,6 @@
       ]
     },
     {
-      "id": 173,
-      "name": "ians-search-grounding-before-drafting",
-      "prompt": "[Warm/chained scenario] We already discussed SEC cyber disclosure rules and how peers are handling them. Please set up an AAE based on that context.",
-      "expected_output": "On a WARM request (a real topic was discussed in-conversation, or context was chained in), before drafting Driver/Questions from open-web knowledge the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability. On a COLD-OPEN request (no prior substantive conversation), the grounding step is skipped entirely — see eval 363.",
-      "files": [],
-      "notes": "Regression guard: the skill was observed citing open-web sources despite IANS coverage.",
-      "structural_checklist": [
-        "Step 2.5 documented in SKILL.md with exact user-facing wording",
-        "Skill calls ians_search before any open-web drafting",
-        "When results exist, up to 3 candidates surfaced and user asked before continuing",
-        "When no results, skill states so and continues from conversation context only",
-        "Documented behavior when ians_search MCP tool is not registered"
-      ]
-    },
-    {
       "id": 172,
       "name": "connector-submit-runs-validation-gate",
       "prompt": "[Beta connector active.] Trigger the AAE skill in submit mode with a thin prompt (driver only, no questions stated). Proceed through review without filling the Questions field and say 'submit'.",
@@ -389,20 +374,6 @@
         "No fabricated or placeholder identity value shown",
         "Payload omits email_address unless an explicit reply-to override is requested",
         "validate_submission.py succeeds without an email field and without --whoami"
-      ]
-    },
-    {
-      "id": 363,
-      "name": "no-grounding-step-on-cold-open",
-      "prompt": "Set up an Ask-an-Expert for me.",
-      "expected_output": "This is a cold-open request — the opening turn is just a request to file an AAE with no prior substantive conversation and no chained context. The skill SKIPS Step 2.5 grounding entirely: it does not call ians_search for grounding, does not surface candidate IANS sources, and does not ask the user to pick a source. It proceeds straight to Step 3, where the must_ask placeholders gather the driver and questions without inventing anything. On a WARM request (a real topic was discussed, or another skill chained in context), grounding still runs per Step 2.5 — the warm-request grounding rule is scoped, not reversed.",
-      "files": [],
-      "notes": "Grounding-first had become a forced content-selection barrier on cold opens. The cold-open gate scopes (does not reverse) the warm-request grounding rule: grounding remains on warm/chained requests.",
-      "structural_checklist": [
-        "Cold-open AAE request proceeds without a content-selection step",
-        "No ians_search grounding call and no source candidates surfaced on a cold open",
-        "Step 2.5 documents the cold-open gate and the scope note (not a full reversal)",
-        "Warm/chained requests still run grounding per Step 2.5"
       ]
     },
     {

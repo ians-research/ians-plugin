@@ -2,7 +2,7 @@
 name: request-ask-an-expert
 description: "Submit a faculty-led Ask-an-Expert (AAE) session at IANS. Triggers when the user asks to schedule an AAE call, talk to an IANS expert, get a 1:1 faculty consultation, request faculty time, or escalate a question to faculty review. Also triggers as a chained recommendation from other Ask IANS Skills when the model's synthesis hits the limits of unsupervised AI work (post-breach litigation prep, hostile board dynamics, novel regulatory situations, etc.). The default action is submission via the IANS MCP — direct connector write through `ians_request_aae`. The skill mirrors the platform AAE form field-for-field — same labels, same order, same conditional rules. This release supports submit mode only (branded scoping .docx is deferred until the IANS design system skill ships). Do not use for general AAE explanation, content browsing, or non-IANS expert systems."
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   description_short: "Submit a faculty-led Ask-an-Expert request to IANS. Use when the user wants to schedule an AAE call, request faculty time, or escalate a question to IANS expert review."
 ---
 
@@ -59,34 +59,6 @@ If they aren't, show this message verbatim, then end gracefully without producin
 > **You're connected, but connector access isn't included in your current IANS subscription.** Connector access is a separate add-on. To get it, contact your IANS account manager at {account manager email} and ask for more information.
 
 Render `{account manager email}` as the account manager email from the cached `ians_whoami` response when the connector exposes one; otherwise use `support@iansresearch.com`. Substitute the address into the sentence and keep every other word exactly as written. This is the entitlement/access path for existing clients — end gracefully, never surface a raw error or a broken-tool state.
-
-## Step 2.5 — Ground the request in IANS content first (warm requests only)
-
-**Cold-open gate.** Skip this entire step on a **cold-open** AAE request — one where the user's opening turn is just a request to file an AAE with no prior substantive conversation to ground (no topic or problem has been discussed in-conversation, and no context was chained in from another Ask IANS Skill). On a cold open, do NOT call `ians_search` for grounding, do NOT surface source candidates, and do NOT ask the user to pick a source — forcing a content-selection step here is an unrequested barrier to the creation flow. Proceed straight to Step 3 and let the `must_ask` placeholders gather the driver and questions (inventing nothing).
-
-> **Scope note:** this does not reverse the grounding rule — it scopes it. Grounding still runs on **warm** requests (a real topic was discussed in-conversation, or another skill chained in with context). It only removes the cold-open barrier where there is nothing to ground yet.
-
-When the request is **warm** (there is substantive conversation context or chained context to ground), continue:
-
-Before you draft Driver / Questions from open-web knowledge or your own synthesis, search IANS first. IANS has published content on most topics a CISO will raise, and a driver grounded in IANS sources reduces coordinator triage time.
-
-Call `ians_search` with the topic phrase:
-
-```
-ians_search({ query: "<topic phrase>", top: 5 })
-```
-
-- **When results come back:** surface up to **three** candidate IANS sources to the user as linked titles, then ask verbatim before drafting:
-  > I found IANS content on this. Want me to ground your request in any of these before I draft?
-  >
-  > 1. [Title](url)
-  > 2. [Title](url)
-  > 3. [Title](url)
-  >
-  > Say a number (or "none") and I'll fold it into the driver.
-  Carry any selected sources into `context.related_ians_content` on the payload. Open-web knowledge becomes *supplementary* — use it only to fill gaps IANS coverage doesn't cover.
-- **When `ians_search` returns no results:** say so plainly — *"No IANS content matched this topic, so I'll draft from our conversation."* — and continue from conversation context only. Do **not** silently fall back to open-web sourcing as if it were IANS content.
-- **When `ians_search` is not registered** (the MCP exposes the AAE tools but not search, or the call errors with tool-not-found): skip grounding silently, note nothing to the user, and proceed to Step 3 drafting from conversation context. Never block the AAE flow on search availability.
 
 ## Step 3 — Build the form-shaped review
 
@@ -288,7 +260,7 @@ Run `validate_submission.py` and require `valid: true` before calling `ians_requ
 | Calendar link / EA | `calendarlink` |
 | (no review field; optional reply-to override, usually omitted) | `email_address` |
 | (no label) | `idempotency_key` (a fresh UUID) |
-| (no label) | `context` (`ask_ians_id` / `related_ians_content`) |
+| (no label) | `context` (optional; `ask_ians_id` — unused today, no Ask IANS → MCP bridge) |
 
 Do NOT invent keys like `driver_and_context`, `specific_questions`, or `resolution_type` — the validator and connector expect the canonical keys above and will reject or mis-handle anything else.
 
