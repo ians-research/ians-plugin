@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for scripts/validate_submission.py.
 
-Covers the required-field gate, including the DAAS-167/168/169 additions:
+Covers the required-field gate, including the canonical-shape additions:
   - list-shape and sub-labelled question acceptance + counting,
   - canonical + alias guidance acceptance with a normalization warning,
   - placeholder_unfilled rejection on driver / question items / guidance / deadline.
@@ -52,7 +52,7 @@ class ValidPayloadTest(unittest.TestCase):
         self.assertEqual(result["errors"], [])
 
     def test_list_shape_question_counts_correctly(self):
-        # 3 list items satisfy the Phone 3-5 range (DAAS-167).
+        # 3 list items satisfy the Phone 3-5 range.
         result = validate(base_phone_payload(), TODAY)
         self.assertNotIn("too_few", codes(result, "question"))
         self.assertNotIn("too_many", codes(result, "question"))
@@ -185,7 +185,7 @@ class PlaceholderUnfilledTest(unittest.TestCase):
 
 
 class EmailTest(unittest.TestCase):
-    """DAAS-362: email is an optional reply-to override, never required.
+    """Email is an optional reply-to override, never required.
 
     The connector sets the email server-side from the authenticated session and
     ians_whoami does not expose it, so a payload without an email is valid and

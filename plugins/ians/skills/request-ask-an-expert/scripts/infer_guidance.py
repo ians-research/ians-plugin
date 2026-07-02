@@ -22,7 +22,7 @@ Input JSON shape:
   "question": "<the question text — typically the numbered list from draft_payload>"
 }
 
-Output JSON to stdout (guidance uses the canonical Salesforce picklist labels
+Output JSON to stdout (guidance uses the canonical picklist labels
 "Strategic / Executive" and "Technical / Tactical"):
 {
   "guidance": ["Strategic / Executive", "Technical / Tactical"]

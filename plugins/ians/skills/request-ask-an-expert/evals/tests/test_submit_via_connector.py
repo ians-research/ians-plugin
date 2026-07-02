@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/submit_via_connector.py.
+"""Unit tests for evals/submit_via_connector.py (dev-only contract harness).
 
-Covers connector payload canonicalization (DAAS-167/168) and graceful
-connector-unavailable handling (DAAS-194).
+Covers connector payload canonicalization and graceful connector-unavailable
+handling.
 
 Run from the skill root:
     python -m unittest discover -s evals/tests -v
@@ -16,9 +16,11 @@ import sys
 import tempfile
 import unittest
 
-SCRIPTS = pathlib.Path(__file__).resolve().parents[2] / "scripts"
-SKILL_ROOT = SCRIPTS.parent
+EVALS = pathlib.Path(__file__).resolve().parents[1]
+SKILL_ROOT = EVALS.parent
+SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(EVALS))
 
 from aae_common import GUIDANCE_STRATEGIC, GUIDANCE_TECHNICAL  # noqa: E402
 from submit_via_connector import (  # noqa: E402
@@ -29,13 +31,13 @@ from submit_via_connector import (  # noqa: E402
     shape_success,
 )
 
-FIXTURES = SKILL_ROOT / "evals" / "fixtures"
+FIXTURES = EVALS / "fixtures"
 
 EM = "\u2014"
 
 
 class BuildConnectorPayloadTest(unittest.TestCase):
-    """Connector payload canonicalization (DAAS-167/168)."""
+    """Connector payload canonicalization."""
 
     def test_list_question_canonicalized_to_string(self):
         """A list-shaped question serializes to the canonical numbered string."""
@@ -57,7 +59,7 @@ class BuildConnectorPayloadTest(unittest.TestCase):
         self.assertIsInstance(out["question"], str)
 
     def test_guidance_normalized_to_canonical_array(self):
-        """Short-form guidance normalizes to the canonical Salesforce picklist labels."""
+        """Short-form guidance normalizes to the canonical picklist labels."""
         payload = {
             "resolution": "Phone",
             "driver": "Board ask.",
@@ -82,7 +84,7 @@ class BuildConnectorPayloadTest(unittest.TestCase):
 
 
 class GracefulFailureTest(unittest.TestCase):
-    """Graceful connector-unavailable and error mapping (DAAS-194)."""
+    """Graceful connector-unavailable and error mapping."""
 
     def test_shape_connector_unavailable_includes_options(self):
         """connector_unavailable carries the three graceful-failure options."""
@@ -132,8 +134,8 @@ class GracefulFailureTest(unittest.TestCase):
 
 
 class ShapeSuccessTest(unittest.TestCase):
-    """DAAS-306: skill aligns to the connector's integration_request_id and
-    drops the Salesforce case number / tracking URL it never returned."""
+    """The skill aligns to the connector's integration_request_id and drops
+    the case number / tracking URL the connector never returned."""
 
     def _payload(self, resolution: str = "Phone") -> dict:
         """Return a minimal valid AAE payload for the given resolution."""
@@ -197,7 +199,7 @@ class SubmitViaConnectorCliTest(unittest.TestCase):
             payload_path.write_text(json.dumps(payload), encoding="utf-8")
             cmd = [
                 sys.executable,
-                str(SCRIPTS / "submit_via_connector.py"),
+                str(EVALS / "submit_via_connector.py"),
                 "--payload",
                 str(payload_path),
                 *extra_args,

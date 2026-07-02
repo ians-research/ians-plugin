@@ -53,7 +53,7 @@
       "prompt": "[Programmatic test for parse_urgency.py.] User says 'no rush — whenever you can fit me in over the next few weeks works fine.' Verify expedite_request stays false even though 'next few weeks' has a duration cue.",
       "expected_output": "parse_urgency returns expedite_request:false, deadline:null, matched_phrase contains 'no rush', reasoning notes the explicit deflation. The 'no rush' signal must override duration cues so users can downplay urgency in their own words.",
       "files": [],
-      "notes": "Sprint 2 unit-flavor test — checks that no_rush language wins over relative duration phrases.",
+      "notes": "Unit-flavor test — checks that no_rush language wins over relative duration phrases.",
       "structural_checklist": [
         "expedite_request is false",
         "deadline is null",
@@ -64,10 +64,10 @@
     {
       "id": 18,
       "name": "scheduling-mixed-routes-correctly",
-      "prompt": "[Programmatic test for parse_scheduling.py.] User says 'I'm in EST, mornings work better, here's my Calendly: https://calendly.com/javier-rivera'. Verify the URL routes to calendarlink and the time-zone/availability text routes to availability.",
+      "prompt": "[Programmatic test for parse_scheduling.py.] User says 'I'm in EST, mornings work better, here's my Calendly: https://calendly.com/sample-ciso'. Verify the URL routes to calendarlink and the time-zone/availability text routes to availability.",
       "expected_output": "parse_scheduling returns calendarlink containing the Calendly URL, availability containing 'EST' and 'mornings'. extracted_urls includes the Calendly URL. Both fields respect their character caps. trimmed_fields is empty for short input.",
       "files": [],
-      "notes": "Sprint 2 unit-flavor test for the routing logic.",
+      "notes": "Unit-flavor test for the routing logic.",
       "structural_checklist": [
         "calendarlink contains the Calendly URL",
         "availability contains time-zone and preference text",
@@ -79,14 +79,14 @@
       "id": 3,
       "name": "connector-unavailable-graceful-failure",
       "prompt": "I want to submit an Ask-an-Expert about our PCI DSS 4.0 audit prep. We're a payments processor. Send it now via the IANS MCP, please.",
-      "expected_output": "Skill calls ians_whoami(). Submit mode is the default. Skill builds the form-shaped review, user confirms, validate_submission.py passes, submit_via_connector.py returns status:connector_unavailable (ians_request_aae not registered or server_error). Skill surfaces the error inline and offers three options verbatim: Try again, Contact Client Services, Save as a scope draft. No JSON artifact is produced. Save as scope draft shows the Step 1 scope-deferral message. Skill does not fabricate success.",
+      "expected_output": "Skill calls ians_whoami(). Submit mode is the default. Skill builds the form-shaped review, user confirms, validate_submission.py passes, the ians_request_aae submission attempt resolves to status:connector_unavailable (tool not registered or server_error). Skill surfaces the error inline and offers three options verbatim: Try again, Contact Client Services, Save as a scope draft. No JSON artifact is produced. Save as scope draft shows the Step 1 scope-deferral message. Skill does not fabricate success.",
       "files": [],
-      "notes": "DAAS-194. Replaces the former Option-B artifact fallback eval.",
+      "notes": "Replaces the former artifact-fallback eval.",
       "structural_checklist": [
         "ians_whoami called",
         "Entitlement gate passed",
         "validate_submission.py invoked before submit",
-        "submit_via_connector.py invoked with payload",
+        "Submission attempted via ians_request_aae",
         "Response status is connector_unavailable",
         "Three graceful-failure options surfaced verbatim",
         "No JSON artifact produced",
@@ -102,7 +102,7 @@
         "fixtures/sample-payload-full.json",
         "fixtures/mock-connector-success.json"
       ],
-      "notes": "DAAS-306. Tests the reconciled connector response contract: tool and skill aligned on integration_request_id, tracking URL dropped. Uses IANS_REQUEST_AAE_AVAILABLE=1 + --mock-response.",
+      "notes": "Tests the reconciled connector response contract: tool and skill aligned on integration_request_id, tracking URL dropped. Uses IANS_REQUEST_AAE_AVAILABLE=1 + --mock-response.",
       "structural_checklist": [
         "submit_via_connector exits 0",
         "Response status is 'submitted'",
@@ -138,7 +138,7 @@
       "notes": "Replaces the artifact-shape eval. Covered by evals/tests/test_submit_via_connector.py.",
       "structural_checklist": [
         "question serialized to canonical '1. Q\\n2. Q' form",
-        "guidance normalized to canonical Salesforce picklist labels",
+        "guidance normalized to canonical picklist labels",
         "idempotency_key present on connector payload"
       ]
     },
@@ -151,7 +151,7 @@
         "fixtures/sample-payload-full.json",
         "fixtures/mock-connector-validation-error.json"
       ],
-      "notes": "Sprint 3 unit-flavor test. Catches regressions in error mapping or message phrasing.",
+      "notes": "Unit-flavor test. Catches regressions in error mapping or message phrasing.",
       "structural_checklist": [
         "Status is 'error'",
         "error_code matches input",
@@ -168,7 +168,7 @@
       "files": [
         "fixtures/sample-payload-v040-canonical.json"
       ],
-      "notes": "DAAS-167. Covered programmatically by evals/tests/test_aae_common.py, test_submit_via_connector.py, and test_validate_submission.py.",
+      "notes": "Covered programmatically by evals/tests/test_aae_common.py, test_submit_via_connector.py, and test_validate_submission.py.",
       "structural_checklist": [
         "build_connector_payload accepts list[str] or a pre-serialized string and emits canonical '1. Q\\n2. Q\\n3. Q'",
         "Em-dash and colon sub-labels are stripped from the start of each question",
@@ -179,15 +179,15 @@
     {
       "id": 168,
       "name": "guidance-canonical-picklist-values",
-      "prompt": "[Programmatic test for infer_guidance.py + validate_submission.py + submit_via_connector.build_connector_payload.] Verify guidance is emitted as the canonical Salesforce picklist labels 'Strategic / Executive' and 'Technical / Tactical', and that short-form aliases are accepted but normalized.",
-      "expected_output": "infer_guidance.py returns ['Strategic / Executive'] / ['Technical / Tactical'] / both (never the short form). validate_submission.py accepts short-form aliases ('Strategic') as valid but emits a guidance 'normalized' warning instructing the skill to rewrite to canonical. build_connector_payload writes the canonical array form. Confirmed the SFDC picklist values match exactly (spaces around the slash).",
+      "prompt": "[Programmatic test for infer_guidance.py + validate_submission.py + submit_via_connector.build_connector_payload.] Verify guidance is emitted as the canonical picklist labels 'Strategic / Executive' and 'Technical / Tactical', and that short-form aliases are accepted but normalized.",
+      "expected_output": "infer_guidance.py returns ['Strategic / Executive'] / ['Technical / Tactical'] / both (never the short form). validate_submission.py accepts short-form aliases ('Strategic') as valid but emits a guidance 'normalized' warning instructing the skill to rewrite to canonical. build_connector_payload writes the canonical array form. Confirmed the picklist values match exactly (spaces around the slash).",
       "files": [],
-      "notes": "DAAS-168. SFDC picklists are strict; mismatched values silently drop the field. Covered by evals/tests/test_infer_guidance.py and test_validate_submission.py.",
+      "notes": "The destination picklists are strict; mismatched values silently drop the field. Covered by evals/tests/test_infer_guidance.py and test_validate_submission.py.",
       "structural_checklist": [
         "infer_guidance.py returns the canonical strings",
         "validate_submission.py accepts short-form aliases on input but normalizes and warns",
         "build_connector_payload writes the canonical form",
-        "SFDC picklist values match exactly: 'Strategic / Executive', 'Technical / Tactical'"
+        "Picklist values match exactly: 'Strategic / Executive', 'Technical / Tactical'"
       ]
     },
     {
@@ -196,7 +196,7 @@
       "prompt": "[Programmatic test for validate_submission.py.] Submit a payload where the Questions field still contains the literal placeholder '[needs your input — what 3-5 specific questions...]' (or is empty). Verify validation blocks before submit.",
       "expected_output": "validate_submission.py returns valid:false with a 'placeholder_unfilled' error on the question field. The same code fires for a placeholder driver, a placeholder guidance value, and a placeholder deadline when expedited. Empty required fields are still rejected (missing). List-form question fields are checked item by item, not just the container. Exit code is 1.",
       "files": [],
-      "notes": "DAAS-169. Covered by evals/tests/test_validate_submission.py PlaceholderUnfilledTest.",
+      "notes": "Covered by evals/tests/test_validate_submission.py PlaceholderUnfilledTest.",
       "structural_checklist": [
         "validate_submission.py adds a placeholder_unfilled error code",
         "Validation rejects any required field containing the literal placeholder string",
@@ -208,9 +208,9 @@
       "id": 170,
       "name": "no-partial-reviews-all-sections-render",
       "prompt": "I want to submit an Ask-an-Expert about our cloud IAM consolidation. Set it up as a Phone call.",
-      "expected_output": "Skill recommends Phone. The FIRST review message renders every required section for Phone/Undecided in a single message — Resolution Type, Driver, Specific Questions, Other Details, Guidance, Expedite + Deadline (with turnaround windows), Scheduling. Other Details and Scheduling appear on the first pass with [optional] placeholders even though nothing was extracted; the user is not forced to prompt for them. No Email or Submitter section renders — identity is set server-side from the authenticated session (DAAS-362). A Faculty Poll run instead skips Other Details, Guidance, and Scheduling entirely.",
+      "expected_output": "Skill recommends Phone. The FIRST review message renders every required section for Phone/Undecided in a single message — Resolution Type, Driver, Specific Questions, Other Details, Guidance, Expedite + Deadline (with turnaround windows), Scheduling. Other Details and Scheduling appear on the first pass with [optional] placeholders even though nothing was extracted; the user is not forced to prompt for them. No Email or Submitter section renders — identity is set server-side from the authenticated session. A Faculty Poll run instead skips Other Details, Guidance, and Scheduling entirely.",
       "files": [],
-      "notes": "DAAS-170. Reported by Kate Lombard — Scheduling never surfaced and Other Details only appeared after a follow-up prompt.",
+      "notes": "Field-reported: Scheduling never surfaced and Other Details only appeared after a follow-up prompt.",
       "structural_checklist": [
         "Step 4 enforces no-partial-reviews — required section list is locked per resolution",
         "Scheduling renders for Phone/Undecided with [optional] placeholders when parse_scheduling returns null",
@@ -224,7 +224,7 @@
       "prompt": "We're in the middle of an active breach right now — attackers are still in our environment. I want to set up an Ask-an-Expert.",
       "expected_output": "Step 0.5 detects active-incident language ('in the middle of', 'active breach', 'still in'). The skill proceeds straight to the AAE flow — drafts the submission, presents the form-shaped review, submits. It does NOT improvise incident-response advice or 'while we wait, here's what you can do' parallel-work suggestions, and it does NOT name or recommend any other IANS service (ICC, Incident Command Center, retainers). Behavior is identical on Opus and Sonnet.",
       "files": [],
-      "notes": "DAAS-171. Observed in claude.ai Chat 1 (Iran war scenario). ICC referrals are a coordinator/account-manager call.",
+      "notes": "Observed in a live session during an active-incident scenario. ICC referrals are a coordinator/account-manager call.",
       "structural_checklist": [
         "Active-incident language detected (Step 0.5)",
         "No parallel-work suggestions offered",
@@ -234,27 +234,12 @@
       ]
     },
     {
-      "id": 173,
-      "name": "ians-search-grounding-before-drafting",
-      "prompt": "[Warm/chained scenario] We already discussed SEC cyber disclosure rules and how peers are handling them. Please set up an AAE based on that context.",
-      "expected_output": "On a WARM request (a real topic was discussed in-conversation, or context was chained in), before drafting Driver/Questions from open-web knowledge the skill calls ians_search with the topic phrase (Step 2.5). When results exist it surfaces up to 3 candidate IANS sources as linked titles and asks the user before continuing; selected sources land in context.related_ians_content and open-web becomes supplementary. When ians_search returns no results, the skill says so plainly and continues from conversation context only. When ians_search is not registered, the skill skips grounding silently and proceeds — it never blocks the AAE flow on search availability. On a COLD-OPEN request (no prior substantive conversation), the grounding step is skipped entirely (DAAS-363) — see eval 363.",
-      "files": [],
-      "notes": "DAAS-173. In Cowork Chat 4 the skill cited open-web sources despite IANS coverage.",
-      "structural_checklist": [
-        "Step 2.5 documented in SKILL.md with exact user-facing wording",
-        "Skill calls ians_search before any open-web drafting",
-        "When results exist, up to 3 candidates surfaced and user asked before continuing",
-        "When no results, skill states so and continues from conversation context only",
-        "Documented behavior when ians_search MCP tool is not registered"
-      ]
-    },
-    {
       "id": 172,
       "name": "connector-submit-runs-validation-gate",
       "prompt": "[Beta connector active.] Trigger the AAE skill in submit mode with a thin prompt (driver only, no questions stated). Proceed through review without filling the Questions field and say 'submit'.",
-      "expected_output": "Step 4.5 runs validate_submission.py on the connector submit path. The empty/placeholder Questions field is rejected (placeholder_unfilled / missing) and the skill re-prompts for 3-5 questions (1-3 for Faculty Poll) before any ians_request_aae call. The submission is blocked until valid. As defense in depth the connector itself rejects an unfilled-placeholder or blank question server-side, but the skill must not rely on that. Linked to DAAS-169 (same root rule, different surface).",
+      "expected_output": "Step 4.5 runs validate_submission.py on the connector submit path. The empty/placeholder Questions field is rejected (placeholder_unfilled / missing) and the skill re-prompts for 3-5 questions (1-3 for Faculty Poll) before any ians_request_aae call. The submission is blocked until valid. As defense in depth the connector itself rejects an unfilled-placeholder or blank question server-side, but the skill must not rely on that. Linked to the unfilled-placeholder rule (same root rule, different surface).",
       "files": [],
-      "notes": "DAAS-172. Observed against the Beta connector. Client-side gate covered by evals/tests/test_validate_submission.py; server-side guard covered by ians-mcp test/tools/request-aae.test.js.",
+      "notes": "Observed against the Beta connector. Client-side gate covered by evals/tests/test_validate_submission.py; the connector enforces the same rule server-side as defense in depth.",
       "structural_checklist": [
         "Validation gate (Step 4.5) runs on the connector submit path before ians_request_aae",
         "placeholder_unfilled and empty-field rejections block the ians_request_aae call",
@@ -268,7 +253,7 @@
       "prompt": "Submit an AAE — here's the gist: we need help with our zero-trust rollout sequencing and which controls to prioritize first.",
       "expected_output": "Step 3 treats Specific Questions as must_ask on every run. The placeholder + prompt render above any Claude-drafted questions, and the draft renders inside a 'suggested starting point' callout — clearly a suggestion. Each question shows a ({len}/{cap}) counter, with a section total below the list. The counter reflects the locked payload value, not just typed input. The field does not lock until the user explicitly confirms or rewrites the questions; saying 'submit' without acknowledging the questions re-prompts for confirmation.",
       "files": [],
-      "notes": "DAAS-174. Questions in the user's own words get better faculty answers; a silently-accepted draft traces back to Claude, not the user.",
+      "notes": "Questions in the user's own words get better faculty answers; a silently-accepted draft traces back to Claude, not the user.",
       "structural_checklist": [
         "Step 3 SKILL.md spec documents always-must_ask for Questions",
         "Each question renders with a ({len}/{cap}) counter",
@@ -281,9 +266,9 @@
       "id": 175,
       "name": "aae-recommendation-includes-tied-rationale",
       "prompt": "[Chained-skill scenario] Another Ask IANS Skill hits the limit of unsupervised synthesis on a post-breach litigation-prep question and recommends an AAE.",
-      "expected_output": "When an AAE is recommended AND recommend_resolution.py returns a real signal (non-empty matched_signals) — self-triggered or chained — the skill leads with a one-line rationale tied to that specific signal, in the format 'Faculty review fits here because {signal} — {what a faculty member adds that the AI can't}.' Generic 'you might want to talk to an expert' framing fails. The rationale ties to a concrete conversational signal (e.g., post-breach litigation exposure), not a generic value-prop. When there is no signal (cold open), the rationale is NOT rendered and is not invented (DAAS-365) — see eval 365.",
+      "expected_output": "When an AAE is recommended AND recommend_resolution.py returns a real signal (non-empty matched_signals) — self-triggered or chained — the skill leads with a one-line rationale tied to that specific signal, in the format 'Faculty review fits here because {signal} — {what a faculty member adds that the AI can't}.' Generic 'you might want to talk to an expert' framing fails. The rationale ties to a concrete conversational signal (e.g., post-breach litigation exposure), not a generic value-prop. When there is no signal (cold open), the rationale is NOT rendered and is not invented — see eval 365.",
       "files": [],
-      "notes": "DAAS-175 / DAAS-365. The rationale is conditional on a real signal; on a cold open the skill shows options without a forced rationale.",
+      "notes": "The rationale is conditional on a real signal; on a cold open the skill shows options without a forced rationale.",
       "structural_checklist": [
         "SKILL.md documents the conditional-rationale rule with the format and 2-3 examples",
         "Rule applies to self-triggered and chained invocations",
@@ -297,7 +282,7 @@
       "prompt": "[Beta connector active + AAE entitlement.] Ask the skill to submit an AAE about board reporting metrics.",
       "expected_output": "With the IANS MCP connected and entitlement present, the skill drafts the AAE, presents the form-shaped review, and submits via the connector after confirmation. It does NOT direct the user to the AAE form on iansresearch.com to fill out manually. When the connector is unavailable, the skill surfaces graceful failure options — not a website redirect and not a JSON artifact. The Beta connector is recognized as available in Step 0.",
       "files": [],
-      "notes": "DAAS-182. Reported by Kate Lombard (Cowork Chat #3). Submit via connector is the default; website redirect is not a path this skill offers when the connector is available.",
+      "notes": "Field-reported: submit via connector is the default; website redirect is not a path this skill offers when the connector is available.",
       "structural_checklist": [
         "Connector + entitlement detection in Step 0 recognizes the Beta connector",
         "Default path is connector submission, not website redirect",
@@ -311,7 +296,7 @@
       "prompt": "[Post-submit message check.] Complete an AAE submission and read the confirmation.",
       "expected_output": "The post-submit confirmation references IANS Client Services as the contact point: coordinator contacts the client within 24-48 hours to schedule. Faculty turnaround (4-6 business days Faculty Poll, 8-12 Phone/Undecided) is presented as a separate downstream window — not conflated with first CS contact. It does NOT say the user will hear back from faculty. The same correction holds across the connector-success message and the close (Step 6).",
       "files": [],
-      "notes": "DAAS-183. Reported by Kate Lombard. Faculty produce the deliverable but IANS Client Services coordinates the response loop.",
+      "notes": "Field-reported: faculty produce the deliverable but IANS Client Services coordinates the response loop.",
       "structural_checklist": [
         "Post-submit message references IANS Client Services, not faculty",
         "First CS contact window is 24-48 hours",
@@ -323,9 +308,9 @@
       "id": 184,
       "name": "turnaround-windows-always-surfaced",
       "prompt": "Set up an AAE call about SOC tooling — no particular deadline.",
-      "expected_output": "At the Expedite section the skill surfaces the faculty turnaround window for the selected resolution (the canonical window from the Resolution Type section — Faculty Poll 4-6 business days, Phone/Undecided 8-12 business days), labeled as downstream after scheduling. The 24-48 hour first Client Services contact is the canonical scheduling statement, kept separate from faculty turnaround. The window renders even with no deadline. The post-submit confirmation surfaces the scheduling window and the resolution's faculty window distinctly, sourced from the canonical statement rather than re-listing both windows (DAAS-364) — see eval 364.",
+      "expected_output": "At the Expedite section the skill surfaces the faculty turnaround window for the selected resolution (the canonical window from the Resolution Type section — Faculty Poll 4-6 business days, Phone/Undecided 8-12 business days), labeled as downstream after scheduling. The 24-48 hour first Client Services contact is the canonical scheduling statement, kept separate from faculty turnaround. The window renders even with no deadline. The post-submit confirmation surfaces the scheduling window and the resolution's faculty window distinctly, sourced from the canonical statement rather than re-listing both windows — see eval 364.",
       "files": [],
-      "notes": "DAAS-184 / DAAS-364. Windows are surfaced for the selected resolution, sourced from a single canonical statement instead of being restated in multiple places.",
+      "notes": "Windows are surfaced for the selected resolution, sourced from a single canonical statement instead of being restated in multiple places.",
       "structural_checklist": [
         "Expedite section surfaces the faculty turnaround window for the selected resolution",
         "24-48 hour CS scheduling window kept separate from faculty turnaround",
@@ -339,7 +324,7 @@
       "prompt": "[Programmatic test for submit_via_connector.py graceful failure.] Force --mock-tool-not-registered and verify status:connector_unavailable with retry, contact_client_services, and save_scope_draft options.",
       "expected_output": "submit_via_connector.py returns status:connector_unavailable, user_message, options array with all three graceful-failure choices, retryable:true. No artifact path referenced.",
       "files": [],
-      "notes": "DAAS-194. Covered by evals/tests/test_submit_via_connector.py.",
+      "notes": "Covered by evals/tests/test_submit_via_connector.py.",
       "structural_checklist": [
         "status is connector_unavailable",
         "options includes retry, contact_client_services, save_scope_draft",
@@ -353,7 +338,7 @@
       "prompt": "Set up a Faculty Poll about whether we should adopt zero-trust segmentation, which vendors peers prefer, and how to prioritize identity vs network controls — we need a defensible board position with trade-offs explained.",
       "expected_output": "User selects or skill recommends Faculty Poll. check_poll_fit.py flags decision-oriented / multi-topic shape. Skill surfaces the verbatim Phone nudge. User can accept switch to Phone or keep Poll; both paths proceed. If user keeps Poll despite nudge, skill notes the decline internally.",
       "files": [],
-      "notes": "DAAS-196 / DAAS-208. Covered by evals/tests/test_check_poll_fit.py.",
+      "notes": "Covered by evals/tests/test_check_poll_fit.py.",
       "structural_checklist": [
         "check_poll_fit.py run when Faculty Poll selected",
         "Nudge fires only when heuristic matches",
@@ -368,7 +353,7 @@
       "prompt": "[Post-submit message check after successful connector submit.] Complete an AAE Phone submission and read the confirmation.",
       "expected_output": "Confirmation states an IANS Client Services coordinator will contact the user within 24-48 hours to schedule. Faculty turnaround (8-12 business days for Phone) is a separate downstream window — NOT used as the first-contact promise. Does not say 'hear from coordinator within 8-12 business days'.",
       "files": [],
-      "notes": "DAAS-207. Faculty check-in 2026-05-29. CS scheduling is 24-48 hours; 8-12 is faculty turnaround after scheduling.",
+      "notes": "CS scheduling is 24-48 hours; 8-12 is faculty turnaround after scheduling.",
       "structural_checklist": [
         "First CS contact window is 24-48 hours",
         "Faculty turnaround is separate downstream window",
@@ -382,7 +367,7 @@
       "prompt": "Set up an AAE call about our cloud IAM consolidation roadmap.",
       "expected_output": "Skill calls ians_whoami() for the entitlement gate only. Because ians_whoami returns just entitlement flags (and, when on file, the account manager's contact) and NOT the signed-in user's name or email, the form-shaped review renders NO Email line and NO Submitter section. The skill never invents, guesses, or placeholders an identity value. The locked payload omits email_address (the connector populates the reply-to email server-side from the authenticated session); email_address appears only when the user explicitly asks to route replies to a different address. validate_submission.py is run with --payload only (no --whoami) and passes without an email field.",
       "files": [],
-      "notes": "DAAS-362. ians_whoami exposes entitlement flags only; the prior Email/Submitter rendering fabricated identity. Covered by evals/tests/test_validate_submission.py EmailTest.",
+      "notes": "ians_whoami exposes entitlement flags only; the prior Email/Submitter rendering fabricated identity. Covered by evals/tests/test_validate_submission.py EmailTest.",
       "structural_checklist": [
         "Skill does not read Email or Submitter name from ians_whoami",
         "No Email line and no Submitter section rendered in the review",
@@ -392,26 +377,12 @@
       ]
     },
     {
-      "id": 363,
-      "name": "no-grounding-step-on-cold-open",
-      "prompt": "Set up an Ask-an-Expert for me.",
-      "expected_output": "This is a cold-open request — the opening turn is just a request to file an AAE with no prior substantive conversation and no chained context. The skill SKIPS Step 2.5 grounding entirely (DAAS-363): it does not call ians_search for grounding, does not surface candidate IANS sources, and does not ask the user to pick a source. It proceeds straight to Step 3, where the must_ask placeholders gather the driver and questions without inventing anything. On a WARM request (a real topic was discussed, or another skill chained in context), grounding still runs per Step 2.5 — DAAS-173 is scoped, not reversed.",
-      "files": [],
-      "notes": "DAAS-363. Implementing DAAS-173 made grounding a forced content-selection barrier on cold opens. Scopes (does not reverse) DAAS-173: grounding remains on warm/chained requests.",
-      "structural_checklist": [
-        "Cold-open AAE request proceeds without a content-selection step",
-        "No ians_search grounding call and no source candidates surfaced on a cold open",
-        "Step 2.5 documents the cold-open gate and the DAAS-173 scope note (not a full reversal)",
-        "Warm/chained requests still run grounding per Step 2.5"
-      ]
-    },
-    {
       "id": 364,
       "name": "turnaround-windows-stated-once-canonical",
       "prompt": "[SKILL.md structure check.] Verify each turnaround window is stated once in a canonical place and referenced elsewhere.",
       "expected_output": "Each faculty turnaround window appears once as the canonical statement co-located with the Resolution Type descriptions (Phone/Undecided 8-12 business days; Faculty Poll 4-6 business days), labeled as the downstream faculty deliverable window. The 24-48h first Client Services contact (scheduling) is stated once and explicitly labeled separate from faculty turnaround, with the do-not-conflate warning appearing a single time. The Expedite section, the deadline warning, the Step 5 confirmation, and the Step 6 close all REFERENCE the canonical statement (surfacing the resolution's window for the user) rather than restating both windows or repeating the conflation warning.",
       "files": [],
-      "notes": "DAAS-364. Turnaround windows and the scheduling-vs-turnaround warning were restated three times; consolidated to a single canonical statement that other steps reference.",
+      "notes": "Turnaround windows and the scheduling-vs-turnaround warning were restated three times; consolidated to a single canonical statement that other steps reference.",
       "structural_checklist": [
         "Each faculty turnaround window stated once in the canonical Resolution Type statement",
         "Scheduling-call timing (24-48h) stated once and labeled separate from turnaround",
@@ -423,9 +394,9 @@
       "id": 365,
       "name": "no-forced-rationale-on-cold-open",
       "prompt": "Set up an Ask-an-Expert for me.",
-      "expected_output": "On a cold open with no problem on the table, recommend_resolution.py returns recommendation 'Undecided' with empty matched_signals (no signal). The skill does NOT render a 'fits because' line and does NOT invent a rationale (DAAS-365). It shows the three Resolution Type options and a neutral prompt asking the user to pick or say more, putting no words in the user's mouth. When a real signal IS present (warm/chained), the skill leads with the rationale tied to that specific signal per Step 3.",
+      "expected_output": "On a cold open with no problem on the table, recommend_resolution.py returns recommendation 'Undecided' with empty matched_signals (no signal). The skill does NOT render a 'fits because' line and does NOT invent a rationale. It shows the three Resolution Type options and a neutral prompt asking the user to pick or say more, putting no words in the user's mouth. When a real signal IS present (warm/chained), the skill leads with the rationale tied to that specific signal per Step 3.",
       "files": [],
-      "notes": "DAAS-365. The 'always say why an AAE fits' rule forced a rationale that didn't exist on a cold open, nudging invention the skill forbids elsewhere. Now conditional on recommend_resolution.py returning a signal.",
+      "notes": "The 'always say why an AAE fits' rule forced a rationale that didn't exist on a cold open, nudging invention the skill forbids elsewhere. Now conditional on recommend_resolution.py returning a signal.",
       "structural_checklist": [
         "'fits because' line renders only when recommend_resolution.py returns a signal",
         "Cold open shows the three options without a forced rationale",

@@ -3,7 +3,7 @@
 IANS Request Ask-an-Expert — Submission Validator
 
 Enforces the platform AAE form's required-field rules on the canonical
-payload BEFORE the skill calls submit_via_connector.py or ians_request_aae.
+payload BEFORE the skill calls ians_request_aae.
 The connector validates server-side but only after we've already
 told the user it was sent. This script is the client-side gate.
 
@@ -24,7 +24,7 @@ The required-field matrix mirrors the platform AAE form:
   email_address      OPTIONAL reply-to override only. The connector populates the
                      email server-side from the authenticated session, so this is
                      never required client-side and is never sourced from
-                     ians_whoami (DAAS-362). When present, must look like an email.
+                     ians_whoami. When present, must look like an email.
   expedite_request   required boolean (defaults to False if absent)
   deadline           required iff expedite_request=True; must be ISO date ≥ today
   availability       optional; forbidden for Faculty Poll
@@ -182,8 +182,8 @@ def _check_question(
     errors: list[Issue] = []
     raw_value = _raw_question_value(payload)
 
-    # An unfilled placeholder is never valid content — check before normalizing
-    # (DAAS-169). List-form fields are checked item by item, not just the container.
+    # An unfilled placeholder is never valid content — check before normalizing.
+    # List-form fields are checked item by item, not just the container.
     if _question_has_placeholder(raw_value):
         errors.append({
             "field": "question",
@@ -241,7 +241,7 @@ def _check_details(payload: dict, is_fp: bool) -> list[Issue]:  # noqa: FBT001
     errors: list[Issue] = []
     details = (payload.get("details") or "").strip()
     # Details is optional; an unfilled "[optional — …]" placeholder counts as
-    # empty, not as submittable content (DAAS-169).
+    # empty, not as submittable content.
     if not details or is_placeholder(details):
         return errors
     if is_fp:
@@ -277,7 +277,7 @@ def _check_guidance(
             })
         return errors, warnings
 
-    # An unfilled placeholder is not a guidance selection (DAAS-169).
+    # An unfilled placeholder is not a guidance selection.
     if any(is_placeholder(item) for item in raw):
         errors.append({
             "field": "guidance",
@@ -298,8 +298,8 @@ def _check_guidance(
         return errors, warnings
 
     # Accept short-form aliases ("Strategic") but normalize to the canonical
-    # Salesforce picklist values and warn so the skill can rewrite the payload
-    # before submission (DAAS-168).
+    # picklist values and warn so the skill can rewrite the payload
+    # before submission.
     canonical, normalized_from_alias, unknown = normalize_guidance(raw)
     if unknown:
         errors.append({
@@ -312,7 +312,7 @@ def _check_guidance(
             "field": "guidance",
             "code": "normalized",
             "message": (
-                "Guidance uses short-form values; canonical Salesforce picklist "
+                "Guidance uses short-form values; canonical picklist "
                 f"labels are {list(canonical)}. Rewrite the payload to the "
                 "canonical form before submission."
             ),
@@ -325,7 +325,7 @@ def _check_email(payload: dict) -> list[Issue]:
 
     Email is NOT a client-side required field: the connector populates it
     server-side from the authenticated session, and `ians_whoami` does not
-    expose the user's email (DAAS-362). Only validate the format when the
+    expose the user's email. Only validate the format when the
     payload carries an explicit override; never require it, never read whoami.
     """
     errors: list[Issue] = []

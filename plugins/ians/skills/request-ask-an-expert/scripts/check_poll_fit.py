@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IANS Request Ask-an-Expert — Faculty Poll fit checker (DAAS-196 / DAAS-208)
+IANS Request Ask-an-Expert — Faculty Poll fit checker
 
 Heuristic over drafted questions (and optional driver) to detect when a Faculty
 Poll reads more like a Phone discussion: long context, multiple complex

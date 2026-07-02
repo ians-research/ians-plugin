@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Unit tests for scripts/aae_common.py.
 
-Covers the shared payload helpers behind:
-  - DAAS-167 (canonical question serialization),
-  - DAAS-168 (guidance canonicalization),
-  - DAAS-169 (unfilled-placeholder detection).
+Covers the shared payload helpers:
+  - canonical question serialization,
+  - guidance canonicalization,
+  - unfilled-placeholder detection.
 
 Run from the skill root:
     python -m unittest discover -s evals/tests -v

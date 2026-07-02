@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Unit tests for scripts/infer_guidance.py (DAAS-168).
+"""Unit tests for scripts/infer_guidance.py.
 
-Verifies the inference emits the canonical Salesforce picklist labels rather
+Verifies the inference emits the canonical picklist labels rather
 than the short form, and still returns an empty array when ambiguous.
 
 Run from the skill root:
