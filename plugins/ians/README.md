@@ -46,7 +46,7 @@ These prompts exercise the `request-ask-an-expert` skill end-to-end. With the IA
 
    > We just contained a breach and I'm prepping the board update with counsel involved. Can I get an IANS expert's read on how to frame it?
 
-   The skill leads with a one-line rationale for why faculty review fits, grounds the request in relevant IANS content first, drafts the Driver and Questions for your review, and submits. It files the request only — it does not improvise incident-response advice or name other IANS services.
+   The skill leads with a one-line rationale for why faculty review fits, drafts the Driver and Questions from your conversation for review, and submits. It files the request only — it does not improvise incident-response advice or name other IANS services.
 
 4. **Let IANS pick the format**
 
