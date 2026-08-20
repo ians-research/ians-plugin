@@ -4,11 +4,11 @@ Public marketplace of [Claude Code](https://code.claude.com) and [Claude Cowork]
 
 This repo publishes **Claude plugins** (skills + supporting assets). Plugins that talk to IANS require the user to connect the **IANS MCP** server (see each plugin README). Some plugins ship a **full skill** in-repo (workflow, prompts, scripts); others may remain thin routers over a hosted workflow.
 
-## Available plugin and skills
+## Available plugins
 
-| Plugin | Skill | Description |
-| --- | --- | --- |
-| [`ians`](./plugins/ians) | [`request-ask-an-expert`](./plugins/ians/skills/request-ask-an-expert/SKILL.md) | Submit a faculty-led Ask-an-Expert (AAE) request to IANS. Form-shaped review, Python validation/submission helpers, connector-only submit path with graceful failure when the MCP is unavailable. Submit-only in this release. |
+| Plugin | Description |
+| --- | --- |
+| [`ians`](./plugins/ians) | Bundles the **IANS MCP** connector (remote HTTP MCP at `https://mcp.iansresearch.com/mcp`) for access to the IANS platform. Connector-only — no skills ship in this release. |
 
 ## Installation
 
@@ -19,11 +19,11 @@ From inside Claude Code:
 /plugin install ians@ians-tools
 ```
 
-Installing the `ians` plugin enables every IANS skill it contains.
+Installing the `ians` plugin registers the bundled IANS MCP connector (see the [plugin README](./plugins/ians/README.md) for the per-app connect steps).
 
 ## How these plugins are structured
 
-Each plugin lives under `plugins/<name>/` with a `.claude-plugin/plugin.json` manifest and one or more `skills/<skill-name>/SKILL.md` directories. The `ians` plugin is the IANS bundle: every IANS-branded skill lives under [`plugins/ians/skills/`](./plugins/ians/skills/), so they share one plugin root and can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md`. Each skill ships its supporting assets (e.g. `scripts/` for Python helpers, `evals/` for repeatable checks) alongside its `SKILL.md`.
+Each plugin lives under `plugins/<name>/` with a `.claude-plugin/plugin.json` manifest and, optionally, one or more `skills/<skill-name>/SKILL.md` directories. The `ians` plugin is the IANS bundle; it ships connector-only in this release, but any IANS-branded skills added later live under `plugins/ians/skills/`, so they share one plugin root and can chain to each other via `${CLAUDE_PLUGIN_ROOT}/skills/<skill-name>/SKILL.md`. Each skill ships its supporting assets (e.g. `scripts/` for Python helpers, `evals/` for repeatable checks) alongside its `SKILL.md`.
 
 This layout follows Anthropic's [plugin marketplaces](https://docs.claude.com/en/docs/claude-code/plugin-marketplaces) and [plugins reference](https://docs.claude.com/en/docs/claude-code/plugins-reference) spec.
 
@@ -34,20 +34,18 @@ ians-plugin/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/
-    └── ians/                       # IANS bundle (one plugin, many skills)
+    └── ians/                       # IANS plugin (connector-only today)
         ├── .claude-plugin/
         │   └── plugin.json         # plugin manifest
-        ├── README.md
-        └── skills/
-            └── request-ask-an-expert/
-                ├── SKILL.md
-                ├── scripts/        # draft, validate, poll-fit check
-                └── evals/          # scenario fixtures + test harness (dev-only, not shipped)
+        ├── .mcp.json               # bundled IANS MCP connector
+        └── README.md
 ```
+
+Skills, when added, live under `plugins/ians/skills/<skill-name>/` — see [Adding a new IANS skill](#adding-a-new-ians-skill).
 
 ## Adding a new IANS skill
 
-Drop a new directory under [`plugins/ians/skills/<skill-name>/`](./plugins/ians/skills/):
+Drop a new directory under `plugins/ians/skills/<skill-name>/` (the `skills/` directory does not exist yet — this release is connector-only — so create it with the first skill):
 
 ```txt
 plugins/ians/skills/<new-skill-name>/
@@ -74,6 +72,8 @@ Then add a corresponding entry to [`.claude-plugin/marketplace.json`](./.claude-
 ## Releasing skill zips (for Claude.ai / Claude Desktop)
 
 Claude Code installs plugins straight from this repo. To make a skill usable on **Claude.ai** (web) or **Claude Desktop**, end users instead upload a `.zip` of the skill via Settings → Capabilities → Skills. This repo ships a builder that produces those zips.
+
+> These commands apply only once the repo contains at least one skill. This release is connector-only, so `build:skills` / `build-skill-zip.mjs --check` currently find no skills and exit with an error — expected until a skill is added.
 
 Prereqs: Node.js 20+.
 
