@@ -9,11 +9,12 @@ ians-plugin/
 ├── .claude-plugin/
 │   └── marketplace.json            # marketplace catalog
 └── plugins/
-    └── ians/                       # IANS bundle (one plugin, many skills)
+    └── ians/                       # IANS plugin (connector-only in this release)
         ├── .claude-plugin/
         │   └── plugin.json         # plugin manifest
+        ├── .mcp.json               # bundled IANS MCP connector
         ├── README.md
-        └── skills/
+        └── skills/                 # optional; present only once a skill is added
             └── <skill-name>/
                 ├── SKILL.md
                 ├── scripts/        # optional Python/shell helpers
@@ -56,7 +57,7 @@ Each plugin gets one object in the top-level `plugins` array of [`.claude-plugin
 
 ## Validation steps
 
-Run all of these before opening a PR. CI runs the bundle builder in `--check` mode on every PR, but validate locally first:
+Run these before opening a PR. CI runs the bundle builder in `--check` mode on every PR, but validate locally first. Steps 1–3 (plugin bundle) apply to every change; the skill-specific steps apply only when the plugin actually contains a skill — this release is connector-only, so they are noted as such:
 
 ```bash
 # 1. Validate the marketplace manifest (plain + strict)
@@ -66,11 +67,13 @@ claude plugin validate --strict .claude-plugin/marketplace.json
 # 2. Validate the plugin manifest
 claude plugin validate --strict plugins/ians
 
-# 3. Build/verify skill zips and plugin bundles without writing files
-node scripts/build-skill-zip.mjs --check
+# 3. Verify the plugin bundle without writing files
 node scripts/build-plugin-bundle.mjs --check
 
-# 4. Run any skill script tests (Python helpers)
+# 4. Skill-only checks — run these once the plugin contains a skill.
+#    With zero skills (connector-only) the skill-zip builder exits non-zero by design,
+#    and the unittest discovery has no target; both are expected until a skill is added.
+node scripts/build-skill-zip.mjs --check
 python -m unittest discover -s plugins/ians/skills/<skill-name>/evals/tests -v
 ```
 
