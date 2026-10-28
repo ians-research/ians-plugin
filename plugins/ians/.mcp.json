@@ -2,8 +2,7 @@
   "mcpServers": {
     "ians": {
       "type": "http",
-      "url": "https://mcp.iansresearch.com/mcp",
-      "oauth": true
+      "url": "https://mcp.iansresearch.com/mcp"
     }
   }
 }

@@ -16,7 +16,7 @@ From inside Claude Code:
 
 ```txt
 /plugin marketplace add ians-research/ians-plugin
-/plugin install ians@ians-tools
+/plugin install ians@ians-plugins
 ```
 
 Installing the `ians` plugin registers the bundled IANS MCP connector (see the [plugin README](./plugins/ians/README.md) for the per-app connect steps).
@@ -125,7 +125,7 @@ The bundle's archive root is the plugin root: `.claude-plugin/plugin.json` sits 
 
 Claude Desktop's "Upload Plugin" file picker accepts **both** `.zip` and `.plugin`, and both upload successfully — they're byte-identical, only the extension differs. Hand users whichever they prefer.
 
-> Claude Code users don't need this bundle at all — they install straight from the marketplace (`/plugin install ians@ians-tools`, see [Installation](#installation)).
+> Claude Code users don't need this bundle at all — they install straight from the marketplace (`/plugin install ians@ians-plugins`, see [Installation](#installation)).
 
 ## Releasing plugin bundles (CI)
 

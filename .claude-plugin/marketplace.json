@@ -5,7 +5,7 @@
   "description": "IANS plugins for Claude Code and Cowork that integrate with the IANS platform via our MCP server.",
   "owner": {
     "name": "IANS",
-    "email": "support@iansresearch.com"
+    "email": "mcp_support@iansresearch.com"
   },
   "metadata": {
     "pluginRoot": "./plugins"
