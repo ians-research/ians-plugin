@@ -6,10 +6,15 @@
   "description": "IANS integration for Claude Code and Cowork. Bundles the IANS MCP connector for access to the IANS platform.",
   "author": {
     "name": "IANS",
-    "email": "support@iansresearch.com"
+    "email": "mcp_support@iansresearch.com"
   },
   "homepage": "https://github.com/ians-research/ians-plugin/tree/main/plugins/ians",
   "repository": "https://github.com/ians-research/ians-plugin",
   "license": "MIT",
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://www.ians.com/mcp-server",
+  "supportUrl": "https://www.ians.com/contact",
+  "privacyPolicyUrl": "https://www.ians.com/legal/privacy-statement",
+  "termsOfServiceUrl": "https://www.ians.com/legal/terms-of-service",
   "keywords": ["ians", "research", "advisory"]
 }
